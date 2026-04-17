@@ -1,5 +1,8 @@
 #pragma once
 
+// ── Build Mode ───────────────────────────────
+#define TEST_MODE   // 주석 처리하면 실제 모드로 전환
+
 // ── Timers (ms) ──────────────────────────────
 #define T_NO_PACKET     30000   // 패킷 미수신 타임아웃 30s → SAFE_MODE
 #define T_GATE          5000    // 게이트 모터 타임아웃 5s → ERROR
@@ -21,3 +24,9 @@
 #define PIN_LED_R       6       // LED 빨강
 #define PIN_LED_G       7       // LED 초록
 #define PIN_LED_Y       8       // LED 노랑
+
+// ── Test Mode Default Values ─────────────────
+#ifdef TEST_MODE
+#define TEST_LIMIT_OPEN_DEFAULT    false
+#define TEST_LIMIT_CLOSE_DEFAULT   false
+#endif

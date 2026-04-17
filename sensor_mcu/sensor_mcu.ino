@@ -16,22 +16,19 @@ enum SensorMcuState {
 };
 
 // ── Global Variables ──────────────────────────
-SensorMcuState currentState = STATE_INIT;
-
+SensorMcuState currentState         = STATE_INIT;
 AirQualityState airQualityState     = COMFORT;
 AirQualityState prevAirQualityState = COMFORT;
-uint8_t consecCount  = 0;
-uint8_t retryCount   = 0;
-uint8_t batteryPct   = 100;
+uint8_t consecCount      = 0;
+uint8_t retryCount       = 0;
+uint8_t batteryPct       = 100;
 uint8_t sdWriteFailCount = 0;
-
-SensorData sensorData = {0, 0, 0};
-
+SensorData sensorData    = {0, 0, 0};
 uint32_t lastMeasureTime = 0;
 uint32_t lastSdWriteTime = 0;
 
 // ── Helper: Air Quality → Fan/Gate Command ────
-FanCommand  toFanCommand(AirQualityState state) {
+FanCommand toFanCommand(AirQualityState state) {
   return (state == COMFORT) ? CMD_OFF : CMD_ON;
 }
 
@@ -39,41 +36,88 @@ GateCommand toGateCommand(AirQualityState state) {
   return (state == COMFORT) ? GATE_CLOSE : GATE_OPEN;
 }
 
+// ── Serial Command Parser (TEST_MODE only) ────
+#ifdef TEST_MODE
+void parseSerialCommand() {
+  if (!Serial.available()) return;
+
+  String input = Serial.readStringUntil('\n');
+  input.trim();
+
+  if (input.startsWith("co2:")) {
+    testSensorData.co2_ppm = input.substring(4).toFloat();
+    Serial.printf("TEST: co2 set to %.1f ppm\n", testSensorData.co2_ppm);
+
+  } else if (input.startsWith("temp:")) {
+    testSensorData.temperature = input.substring(5).toFloat();
+    Serial.printf("TEST: temp set to %.1f C\n", testSensorData.temperature);
+
+  } else if (input.startsWith("humid:")) {
+    testSensorData.humidity = input.substring(6).toFloat();
+    Serial.printf("TEST: humid set to %.1f %%\n", testSensorData.humidity);
+
+  } else if (input.startsWith("bat:")) {
+    testBatteryPct = (uint8_t)input.substring(4).toInt();
+    Serial.printf("TEST: battery set to %d%%\n", testBatteryPct);
+
+  } else if (input == "status") {
+    Serial.printf("── Status ──────────────────\n");
+    Serial.printf("co2      : %.1f ppm\n", testSensorData.co2_ppm);
+    Serial.printf("temp     : %.1f C\n",   testSensorData.temperature);
+    Serial.printf("humid    : %.1f %%\n",  testSensorData.humidity);
+    Serial.printf("battery  : %d%%\n",     testBatteryPct);
+    Serial.printf("state    : %s\n",
+      airQualityState == COMFORT ? "COMFORT" :
+      airQualityState == WARNING ? "WARNING" : "ALERT");
+    Serial.printf("consec   : %d/%d\n",    consecCount, CONSEC_THRESHOLD);
+
+  } else if (input == "help") {
+    Serial.println("── Commands ────────────────");
+    Serial.println("co2:<value>    set CO2 ppm");
+    Serial.println("temp:<value>   set temperature C");
+    Serial.println("humid:<value>  set humidity %");
+    Serial.println("bat:<value>    set battery %");
+    Serial.println("status         show current values");
+
+  } else {
+    Serial.printf("Unknown command: %s\n", input.c_str());
+    Serial.println("Type 'help' for commands");
+  }
+}
+#endif
+
 // ── Setup ─────────────────────────────────────
 void setup() {
   Serial.begin(115200);
   delay(3000);
+
+#ifdef TEST_MODE
+  Serial.println("=== TEST MODE ===");
+  Serial.println("Type 'help' for commands");
+#endif
+
   Serial.println("Sensor MCU booting...");
   currentState = STATE_INIT;
 }
 
 // ── Loop ──────────────────────────────────────
 void loop() {
+#ifdef TEST_MODE
+  parseSerialCommand();
+#endif
+
   switch (currentState) {
 
-    // ── INIT ────────────────────────────────
+    // ── INIT ──────────────────────────────────
     case STATE_INIT: {
       bool ok = true;
 
-      if (!sensorsInit()) {
-        Serial.println("Sensor init failed");
-        ok = false;
-      }
-
-      if (!batteryInit()) {
-        Serial.println("Battery init failed");
-        ok = false;
-      }
-
-      if (!espnowInit()) {
-        Serial.println("ESP-NOW init failed");
-        ok = false;
-      }
-
-      if (!storageInit()) {
-        Serial.println("Storage init failed");
+      if (!sensorsInit())  { ok = false; }
+      if (!batteryInit())  { ok = false; }
+      if (!espnowInit())   { ok = false; }
+      if (!storageInit())  {
         // SD 카드 실패는 치명적 에러가 아님
-        // 센서/통신 실패와 달리 계속 진행
+        Serial.println("Storage init failed (continuing)");
       }
 
       if (!ok) {
@@ -81,9 +125,7 @@ void loop() {
         break;
       }
 
-      // 초기 패킷 전송 (OFF, CLOSE)
       espnowSend(CMD_OFF, GATE_CLOSE, batteryPct);
-
       lastMeasureTime = millis();
       lastSdWriteTime = millis();
       currentState    = STATE_IDLE;
@@ -91,30 +133,26 @@ void loop() {
       break;
     }
 
-    // ── IDLE ────────────────────────────────
+    // ── IDLE ──────────────────────────────────
     case STATE_IDLE: {
       if (millis() - lastMeasureTime >= T_MEASURE) {
         lastMeasureTime = millis();
         consecCount     = 0;
         currentState    = STATE_MEASURING;
       }
-      // light sleep은 추후 적용
       break;
     }
 
-    // ── MEASURING ───────────────────────────
+    // ── MEASURING ─────────────────────────────
     case STATE_MEASURING: {
-      // 센서 측정
       if (!sensorsMeasure(sensorData)) {
         Serial.println("Sensor measure failed");
         currentState = STATE_IDLE;
         break;
       }
 
-      // 배터리 측정
       batteryPct = batteryReadPct();
 
-      // 공기질 판단
       AirQualityState evaluated = evaluateAirQuality(sensorData, airQualityState);
 
       if (evaluated == airQualityState) {
@@ -123,18 +161,22 @@ void loop() {
         consecCount = 1;
       }
 
-      // hysteresis 조건 충족 시 상태 전이
       if (consecCount >= CONSEC_THRESHOLD) {
         prevAirQualityState = airQualityState;
         airQualityState     = evaluated;
         consecCount         = 0;
+        Serial.printf("State: %s → %s\n",
+          prevAirQualityState == COMFORT ? "COMFORT" :
+          prevAirQualityState == WARNING ? "WARNING" : "ALERT",
+          airQualityState == COMFORT ? "COMFORT" :
+          airQualityState == WARNING ? "WARNING" : "ALERT");
       }
 
       currentState = STATE_TRANSMIT;
       break;
     }
 
-    // ── TRANSMIT ────────────────────────────
+    // ── TRANSMIT ──────────────────────────────
     case STATE_TRANSMIT: {
       FanCommand  fanCmd  = toFanCommand(airQualityState);
       GateCommand gateCmd = toGateCommand(airQualityState);
@@ -159,12 +201,12 @@ void loop() {
       break;
     }
 
-    // ── SD_WRITE ────────────────────────────
+    // ── SD_WRITE ──────────────────────────────
     case STATE_SD_WRITE: {
       if (millis() - lastSdWriteTime >= T_SD_WRITE) {
         lastSdWriteTime = millis();
 
-        uint32_t timestamp = millis() / 1000;  // 실제 RTC 있으면 교체
+        uint32_t timestamp = millis() / 1000;
 
         bool written = storageWrite(
           sensorData.co2_ppm,
@@ -186,17 +228,15 @@ void loop() {
       break;
     }
 
-    // ── ERROR_SENSOR ────────────────────────────
+    // ── ERROR_SENSOR ──────────────────────────
     case STATE_ERROR_SENSOR: {
       static bool errorLogged = false;
       if (!errorLogged) {
         Serial.println("FATAL: Sensor/ESP-NOW init failed. Halting.");
         errorLogged = true;
       }
-      // LED 에러 표시 추후 핀 확정 후 추가
       delay(1000);
       break;
     }
-
   }
 }

@@ -11,6 +11,11 @@ enum BatteryState {
   BATTERY_CRITICAL
 };
 
+// ── Test Mode ─────────────────────────────────
+#ifdef TEST_MODE
+extern uint8_t testBatteryPct;
+#endif
+
 // ── Function Declarations ─────────────────────
 bool batteryInit();
 uint8_t batteryReadPct();

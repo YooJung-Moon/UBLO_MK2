@@ -10,6 +10,12 @@ enum GateState {
   GATE_STATE_MOVING
 };
 
+// ── Test Mode ─────────────────────────────────
+#ifdef TEST_MODE
+extern bool testLimitOpen;
+extern bool testLimitClosed;
+#endif
+
 // ── Function Declarations ─────────────────────
 void gateInit();
 void gateOpen();
@@ -20,3 +26,4 @@ bool isLimitSwitchClosed();
 bool isGateTimedOut();
 void gateStartTimer();
 GateState gateGetState();
+void gateSetState(GateState state);

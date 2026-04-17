@@ -16,8 +16,8 @@ enum FanMcuState {
 };
 
 // ── Global Variables ──────────────────────────
-FanMcuState currentState    = STATE_INIT;
-uint32_t    lastPacketTime  = 0;
+FanMcuState currentState   = STATE_INIT;
+uint32_t    lastPacketTime = 0;
 
 // ── LED Helper ────────────────────────────────
 void setLed(uint8_t battery_pct) {
@@ -26,18 +26,73 @@ void setLed(uint8_t battery_pct) {
   digitalWrite(PIN_LED_Y, LOW);
 
   if (battery_pct >= 60) {
-    digitalWrite(PIN_LED_G, HIGH);       // NORMAL: 초록 상시 점등
+    digitalWrite(PIN_LED_G, HIGH);
   } else if (battery_pct >= 20) {
-    digitalWrite(PIN_LED_Y, millis() % 1000 < 500 ? HIGH : LOW);  // POWER_SAVE: 노랑 점멸
+    digitalWrite(PIN_LED_Y, millis() % 1000 < 500 ? HIGH : LOW);
   } else {
-    digitalWrite(PIN_LED_R, millis() % 500 < 250 ? HIGH : LOW);   // CRITICAL: 빨강 점멸
+    digitalWrite(PIN_LED_R, millis() % 500 < 250 ? HIGH : LOW);
   }
 }
+
+// ── Serial Command Parser (TEST_MODE only) ────
+#ifdef TEST_MODE
+void parseSerialCommand() {
+  if (!Serial.available()) return;
+
+  String input = Serial.readStringUntil('\n');
+  input.trim();
+
+  if (input == "lim:open") {
+    testLimitOpen   = true;
+    testLimitClosed = false;
+    Serial.println("TEST: limit switch OPEN");
+
+  } else if (input == "lim:close") {
+    testLimitOpen   = false;
+    testLimitClosed = true;
+    Serial.println("TEST: limit switch CLOSE");
+
+  } else if (input == "lim:none") {
+    testLimitOpen   = false;
+    testLimitClosed = false;
+    Serial.println("TEST: limit switch NONE (moving)");
+
+  } else if (input == "status") {
+    Serial.println("── Status ──────────────────");
+    Serial.printf("FSM state   : %s\n",
+      currentState == STATE_INIT         ? "INIT" :
+      currentState == STATE_GATE_CLOSING ? "GATE_CLOSING" :
+      currentState == STATE_STANDBY      ? "STANDBY" :
+      currentState == STATE_GATE_OPENING ? "GATE_OPENING" :
+      currentState == STATE_FAN_RUNNING  ? "FAN_RUNNING" :
+      currentState == STATE_SAFE_MODE    ? "SAFE_MODE" : "ERROR");
+    Serial.printf("limit open  : %s\n", testLimitOpen   ? "true" : "false");
+    Serial.printf("limit close : %s\n", testLimitClosed ? "true" : "false");
+
+  } else if (input == "help") {
+    Serial.println("── Commands ────────────────");
+    Serial.println("lim:open    limit switch OPEN");
+    Serial.println("lim:close   limit switch CLOSE");
+    Serial.println("lim:none    no limit switch");
+    Serial.println("status      show current state");
+
+  } else {
+    Serial.printf("Unknown command: %s\n", input.c_str());
+    Serial.println("Type 'help' for commands");
+  }
+}
+#endif
 
 // ── Setup ─────────────────────────────────────
 void setup() {
   Serial.begin(115200);
   delay(3000);
+
+#ifdef TEST_MODE
+  Serial.println("=== TEST MODE ===");
+  Serial.println("Type 'help' for commands");
+#endif
+
   Serial.println("Fan MCU booting...");
 
   pinMode(PIN_LED_R, OUTPUT);
@@ -58,6 +113,10 @@ void setup() {
 
 // ── Loop ──────────────────────────────────────
 void loop() {
+#ifdef TEST_MODE
+  parseSerialCommand();
+#endif
+
   switch (currentState) {
 
     // ── INIT ──────────────────────────────────
@@ -73,7 +132,8 @@ void loop() {
     case STATE_GATE_CLOSING: {
       if (isLimitSwitchClosed()) {
         gateStop();
-        Serial.println("GATE_CLOSING: limit switch CLOSE detected → STANDBY");
+        gateSetState(GATE_STATE_CLOSED);
+        Serial.println("GATE_CLOSING → STANDBY");
         lastPacketTime = millis();
         currentState   = STATE_STANDBY;
       } else if (isGateTimedOut()) {
@@ -86,13 +146,8 @@ void loop() {
 
     // ── STANDBY ───────────────────────────────
     case STATE_STANDBY: {
-      // LED 업데이트
       if (newPacketReceived) {
         setLed(latestPacket.battery_pct);
-      }
-
-      // 패킷 수신 처리
-      if (newPacketReceived) {
         lastPacketTime = millis();
         sensor_to_fan_t packet;
         memcpy(&packet, (void *)&latestPacket, sizeof(sensor_to_fan_t));
@@ -104,12 +159,10 @@ void loop() {
           gateStartTimer();
           currentState = STATE_GATE_OPENING;
         }
-        // command=OFF면 STANDBY 유지
       }
 
-      // 패킷 타임아웃 체크
       if (millis() - lastPacketTime > T_NO_PACKET) {
-        Serial.println("STANDBY: packet timeout → SAFE_MODE");
+        Serial.println("STANDBY: timeout → SAFE_MODE");
         currentState = STATE_SAFE_MODE;
       }
       break;
@@ -119,8 +172,9 @@ void loop() {
     case STATE_GATE_OPENING: {
       if (isLimitSwitchOpen()) {
         gateStop();
+        gateSetState(GATE_STATE_OPEN);
         fanOn();
-        Serial.println("GATE_OPENING: limit switch OPEN detected → FAN_RUNNING");
+        Serial.println("GATE_OPENING → FAN_RUNNING");
         currentState = STATE_FAN_RUNNING;
       } else if (isGateTimedOut()) {
         gateStop();
@@ -132,13 +186,8 @@ void loop() {
 
     // ── FAN_RUNNING ───────────────────────────
     case STATE_FAN_RUNNING: {
-      // LED 업데이트
       if (newPacketReceived) {
         setLed(latestPacket.battery_pct);
-      }
-
-      // 패킷 수신 처리
-      if (newPacketReceived) {
         lastPacketTime = millis();
         sensor_to_fan_t packet;
         memcpy(&packet, (void *)&latestPacket, sizeof(sensor_to_fan_t));
@@ -151,13 +200,11 @@ void loop() {
           gateStartTimer();
           currentState = STATE_GATE_CLOSING;
         }
-        // command=ON이면 FAN_RUNNING 유지
       }
 
-      // 패킷 타임아웃 체크
       if (millis() - lastPacketTime > T_NO_PACKET) {
         fanOff();
-        Serial.println("FAN_RUNNING: packet timeout → SAFE_MODE");
+        Serial.println("FAN_RUNNING: timeout → SAFE_MODE");
         currentState = STATE_SAFE_MODE;
       }
       break;
@@ -165,40 +212,44 @@ void loop() {
 
     // ── SAFE_MODE ─────────────────────────────
     case STATE_SAFE_MODE: {
-      fanOff();
-      gateClose();
-      gateStartTimer();
+      static bool safeModeLogged = false;
+      if (!safeModeLogged) {
+        fanOff();
+        Serial.println("SAFE_MODE: fan OFF, closing gate");
+        safeModeLogged = true;
+      }
 
-      // 게이트 닫힘 확인
-      if (isLimitSwitchClosed()) {
+      if (!isLimitSwitchClosed()) {
+        gateClose();
+        gateStartTimer();
+      } else {
         gateStop();
       }
 
-      // 유효한 패킷 수신 시 복귀
       if (newPacketReceived) {
         lastPacketTime = millis();
         espnowResetPacket();
+        safeModeLogged = false;
         Serial.println("SAFE_MODE: packet received → STANDBY");
         currentState = STATE_STANDBY;
       }
       break;
     }
 
-    // ── ERROR ─────────────────────────────────────
+    // ── ERROR ─────────────────────────────────
     case STATE_ERROR: {
-        static bool errorLogged = false;  // 한 번만 출력하기 위한 플래그
-        if (!errorLogged) {
-            fanOff();
-            gateStop();
-            Serial.println("ERROR: manual reset required");
-            errorLogged = true;
-        }
-        // LED 빨강 점멸
-        digitalWrite(PIN_LED_R, millis() % 500 < 250 ? HIGH : LOW);
-        digitalWrite(PIN_LED_G, LOW);
-        digitalWrite(PIN_LED_Y, LOW);
-        delay(100);
-        break;
+      static bool errorLogged = false;
+      if (!errorLogged) {
+        fanOff();
+        gateStop();
+        Serial.println("ERROR: manual reset required");
+        errorLogged = true;
+      }
+      digitalWrite(PIN_LED_R, millis() % 500 < 250 ? HIGH : LOW);
+      digitalWrite(PIN_LED_G, LOW);
+      digitalWrite(PIN_LED_Y, LOW);
+      delay(100);
+      break;
     }
   }
 }

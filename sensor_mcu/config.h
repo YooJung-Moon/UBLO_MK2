@@ -1,5 +1,8 @@
 #pragma once
 
+// ── Build Mode ───────────────────────────────
+#define TEST_MODE   // 주석 처리하면 실제 모드로 전환
+
 // ── MAC Address ──────────────────────────────
 #define RECEIVER_MAC {0xE0, 0x72, 0xA1, 0xF8, 0xF6, 0x0C}  // Fan MCU MAC
 
@@ -26,8 +29,8 @@
 #define CONSEC_THRESHOLD      3       // 상태 전이 연속 횟수
 
 // ── Battery Thresholds ───────────────────────
-#define BATTERY_NORMAL_PCT        60      // NORMAL 기준 (%)
-#define BATTERY_PSAVE_PCT         20      // POWER_SAVE 기준 (%)
+#define BATTERY_NORMAL_PCT    60      // NORMAL 기준 (%)
+#define BATTERY_PSAVE_PCT     20      // POWER_SAVE 기준 (%)
 
 // ── ESP-NOW ──────────────────────────────────
 #define ESPNOW_MAX_RETRY      3       // 최대 재전송 횟수
@@ -42,3 +45,11 @@
 
 // ── SD Card ──────────────────────────────────
 #define SD_FILENAME  "/ublo_log.csv"
+
+// ── Test Mode Default Values ─────────────────
+#ifdef TEST_MODE
+#define TEST_CO2_DEFAULT      400.0f  // 초기 CO₂ (ppm)
+#define TEST_TEMP_DEFAULT     22.0f   // 초기 온도 (°C)
+#define TEST_HUMID_DEFAULT    55.0f   // 초기 습도 (%)
+#define TEST_BAT_DEFAULT      80      // 초기 배터리 (%)
+#endif

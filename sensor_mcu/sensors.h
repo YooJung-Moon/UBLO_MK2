@@ -19,6 +19,11 @@ struct SensorData {
   float humidity;
 };
 
+// ── Test Mode ─────────────────────────────────
+#ifdef TEST_MODE
+extern SensorData testSensorData;
+#endif
+
 // ── Function Declarations ─────────────────────
 bool sensorsInit();
 bool sensorsMeasure(SensorData &data);
