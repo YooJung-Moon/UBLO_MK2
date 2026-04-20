@@ -81,7 +81,6 @@ void gateStop() {
   digitalWrite(PIN_MOTOR_IN1, LOW);
   digitalWrite(PIN_MOTOR_IN2, LOW);
 #else
-  testGateMoving = false;
   Serial.println("TEST: gate stopped");
 #endif
 }
