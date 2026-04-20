@@ -93,7 +93,6 @@ void setup() {
 
 #ifdef TEST_MODE
   Serial.println("=== TEST MODE ===");
-  Serial.println("Type 'help' for commands");
 #endif
 
   Serial.println("Sensor MCU booting...");
@@ -112,13 +111,15 @@ void loop() {
     case STATE_INIT: {
       bool ok = true;
 
-      if (!sensorsInit())  { ok = false; }
-      if (!batteryInit())  { ok = false; }
-      if (!espnowInit())   { ok = false; }
-      if (!storageInit())  {
-        // SD 카드 실패는 치명적 에러가 아님
+      if (!sensorsInit()) { ok = false; }
+      if (!batteryInit()) { ok = false; }
+      if (!espnowInit())  { ok = false; }
+
+#ifndef TEST_MODE
+      if (!storageInit()) {
         Serial.println("Storage init failed (continuing)");
       }
+#endif
 
       if (!ok) {
         currentState = STATE_ERROR_SENSOR;
@@ -203,6 +204,7 @@ void loop() {
 
     // ── SD_WRITE ──────────────────────────────
     case STATE_SD_WRITE: {
+#ifndef TEST_MODE
       if (millis() - lastSdWriteTime >= T_SD_WRITE) {
         lastSdWriteTime = millis();
 
@@ -223,7 +225,7 @@ void loop() {
           Serial.println("SD write success");
         }
       }
-
+#endif
       currentState = STATE_IDLE;
       break;
     }
