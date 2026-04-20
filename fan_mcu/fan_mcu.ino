@@ -90,7 +90,6 @@ void setup() {
 
 #ifdef TEST_MODE
   Serial.println("=== TEST MODE ===");
-  Serial.println("Type 'help' for commands");
 #endif
 
   Serial.println("Fan MCU booting...");
@@ -123,6 +122,7 @@ void loop() {
     case STATE_INIT: {
       Serial.println("INIT: closing gate");
       gateClose();
+      delay(100);
       gateStartTimer();
       currentState = STATE_GATE_CLOSING;
       break;
@@ -213,6 +213,8 @@ void loop() {
     // ── SAFE_MODE ─────────────────────────────
     case STATE_SAFE_MODE: {
       static bool safeModeLogged = false;
+      static bool gateStopLogged = false;
+
       if (!safeModeLogged) {
         fanOff();
         Serial.println("SAFE_MODE: fan OFF, closing gate");
@@ -222,16 +224,18 @@ void loop() {
       if (!isLimitSwitchClosed()) {
         gateClose();
         gateStartTimer();
-      } else {
+      } else if (!gateStopLogged) {
         gateStop();
+        gateStopLogged = true;
       }
 
       if (newPacketReceived) {
         lastPacketTime = millis();
         espnowResetPacket();
         safeModeLogged = false;
+        gateStopLogged = false;
         Serial.println("SAFE_MODE: packet received → STANDBY");
-        currentState = STATE_STANDBY;
+        currentState   = STATE_STANDBY;
       }
       break;
     }
