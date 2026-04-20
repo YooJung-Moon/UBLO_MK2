@@ -155,11 +155,15 @@ void loop() {
 
       AirQualityState evaluated = evaluateAirQuality(sensorData, airQualityState);
 
-      if (evaluated == airQualityState) {
+      // 이전 evaluated와 비교해서 consecCount 증가
+      static AirQualityState prevEvaluated = COMFORT;
+
+      if (evaluated == prevEvaluated) {
         consecCount++;
       } else {
         consecCount = 1;
       }
+      prevEvaluated = evaluated;
 
       Serial.printf("DEBUG: evaluated=%s current=%s consec=%d\n",
         evaluated == COMFORT ? "COMFORT" : evaluated == WARNING ? "WARNING" : "ALERT",
@@ -167,14 +171,19 @@ void loop() {
         consecCount);
 
       if (consecCount >= CONSEC_THRESHOLD) {
-        prevAirQualityState = airQualityState;
-        airQualityState     = evaluated;
-        consecCount         = 0;
-        Serial.printf("State: %s → %s\n",
-          prevAirQualityState == COMFORT ? "COMFORT" :
-          prevAirQualityState == WARNING ? "WARNING" : "ALERT",
-          airQualityState == COMFORT ? "COMFORT" :
-          airQualityState == WARNING ? "WARNING" : "ALERT");
+        if (evaluated != airQualityState) {
+          prevAirQualityState = airQualityState;
+          airQualityState     = evaluated;
+          consecCount         = 0;
+          prevEvaluated       = evaluated;
+          Serial.printf("State: %s → %s\n",
+            prevAirQualityState == COMFORT ? "COMFORT" :
+            prevAirQualityState == WARNING ? "WARNING" : "ALERT",
+            airQualityState == COMFORT ? "COMFORT" :
+            airQualityState == WARNING ? "WARNING" : "ALERT");
+        } else {
+          consecCount = 0;
+        }
       }
 
       currentState = STATE_TRANSMIT;

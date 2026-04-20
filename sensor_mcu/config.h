@@ -41,26 +41,22 @@
 
 // ── SD Card SPI Pins ─────────────────────────
 #ifdef BOARD_XIAO
+  #define PIN_SD_CS    3
+  #define PIN_SD_MOSI  10
+  #define PIN_SD_MISO  9
+  #define PIN_SD_SCK   8
+#else  // Arduino Nano ESP32
   #define PIN_SD_CS    D3
   #define PIN_SD_MOSI  D10
   #define PIN_SD_MISO  D9
   #define PIN_SD_SCK   D8
-#else  // Arduino Nano ESP32
-  #define PIN_SD_CS    5
-  #define PIN_SD_MOSI  9
-  #define PIN_SD_MISO  8
-  #define PIN_SD_SCK   7
 #endif
 
 // ── SD Card ──────────────────────────────────
 #define SD_FILENAME  "/ublo_log.csv"
 
 // ── Battery ADC ──────────────────────────────
-#ifdef BOARD_XIAO
-  #define PIN_BAT_ADC  A0
-#else
-  #define PIN_BAT_ADC  A0
-#endif
+#define PIN_BAT_ADC     A0
 #define BAT_ADC_RES     4095
 #define BAT_ADC_VREF    3.3f
 #define BAT_R_TOP       100.0f
@@ -70,9 +66,9 @@
 
 // ── DHT Sensor ───────────────────────────────
 #ifdef BOARD_XIAO
-  #define PIN_DHT   D2
-#else
   #define PIN_DHT   2
+#else  // Arduino Nano ESP32
+  #define PIN_DHT   D2
 #endif
 #define DHT_TYPE        DHT11
 
