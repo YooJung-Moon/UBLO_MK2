@@ -162,6 +162,12 @@ void loop() {
         consecCount = 1;
       }
 
+      // 디버그 추가
+      Serial.printf("DEBUG: evaluated=%s current=%s consec=%d\n",
+        evaluated == COMFORT ? "COMFORT" : evaluated == WARNING ? "WARNING" : "ALERT",
+        airQualityState == COMFORT ? "COMFORT" : airQualityState == WARNING ? "WARNING" : "ALERT",
+        consecCount);
+
       if (consecCount >= CONSEC_THRESHOLD) {
         prevAirQualityState = airQualityState;
         airQualityState     = evaluated;
