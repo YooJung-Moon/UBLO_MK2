@@ -155,12 +155,10 @@ void loop() {
 
       AirQualityState evaluated = evaluateAirQuality(sensorData, airQualityState);
 
-      static AirQualityState lastEvaluated = COMFORT;
-      if (evaluated == lastEvaluated) {
+      if (evaluated == airQualityState) {
         consecCount++;
       } else {
-        consecCount   = 1;
-        lastEvaluated = evaluated;
+        consecCount = 1;
       }
 
       Serial.printf("DEBUG: evaluated=%s current=%s consec=%d\n",
@@ -172,14 +170,12 @@ void loop() {
         prevAirQualityState = airQualityState;
         airQualityState     = evaluated;
         consecCount         = 0;
-        if (prevAirQualityState != airQualityState) {  // 상태가 실제로 바뀔 때만 출력
-          Serial.printf("State: %s → %s\n",
-            prevAirQualityState == COMFORT ? "COMFORT" :
-            prevAirQualityState == WARNING ? "WARNING" : "ALERT",
-            airQualityState == COMFORT ? "COMFORT" :
-            airQualityState == WARNING ? "WARNING" : "ALERT");
-  }
-}
+        Serial.printf("State: %s → %s\n",
+          prevAirQualityState == COMFORT ? "COMFORT" :
+          prevAirQualityState == WARNING ? "WARNING" : "ALERT",
+          airQualityState == COMFORT ? "COMFORT" :
+          airQualityState == WARNING ? "WARNING" : "ALERT");
+      }
 
       currentState = STATE_TRANSMIT;
       break;
@@ -189,16 +185,6 @@ void loop() {
     case STATE_TRANSMIT: {
       FanCommand  fanCmd  = toFanCommand(airQualityState);
       GateCommand gateCmd = toGateCommand(airQualityState);
-
-#ifdef TEST_MODE
-#if TEST_SCENARIO == 3
-      if (getScenarioStep() >= 3) {
-        Serial.println("TEST: scenario 3 — stopping packet transmission");
-        currentState = STATE_SD_WRITE;
-        break;
-      }
-#endif
-#endif
 
       bool sent = false;
       retryCount = 0;

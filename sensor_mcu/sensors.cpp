@@ -2,53 +2,6 @@
 
 #ifdef TEST_MODE
 extern uint8_t testBatteryPct;
-#endif
-
-#ifdef TEST_MODE
-// ── Scenario Data ─────────────────────────────
-struct ScenarioStep {
-  float co2_ppm;
-  float temperature;
-  float humidity;
-  uint8_t battery_pct;
-};
-
-#if TEST_SCENARIO == 1
-static ScenarioStep scenario[] = {
-  {400.0f,  22.0f, 55.0f, 80},  // Step 0: COMFORT
-  {400.0f,  22.0f, 55.0f, 80},  // Step 1: COMFORT
-  {400.0f,  22.0f, 55.0f, 80},  // Step 2: COMFORT (3회 → COMFORT 확정)
-  {1200.0f, 22.0f, 55.0f, 75},  // Step 3: WARNING
-  {1200.0f, 22.0f, 55.0f, 75},  // Step 4: WARNING
-  {1200.0f, 22.0f, 55.0f, 75},  // Step 5: WARNING (3회 → WARNING 확정)
-  {900.0f,  22.0f, 55.0f, 70},  // Step 6: COMFORT (hysteresis)
-  {900.0f,  22.0f, 55.0f, 70},  // Step 7: COMFORT
-  {900.0f,  22.0f, 55.0f, 70},  // Step 8: COMFORT (3회 → COMFORT 확정)
-};
-
-#elif TEST_SCENARIO == 2
-static ScenarioStep scenario[] = {
-  {400.0f,  22.0f, 55.0f, 80},  // Step 0: COMFORT
-  {400.0f,  22.0f, 55.0f, 80},  // Step 1: COMFORT
-  {400.0f,  22.0f, 55.0f, 80},  // Step 2: COMFORT (3회 → COMFORT 확정)
-  {1600.0f, 22.0f, 55.0f, 75},  // Step 3: ALERT
-  {1600.0f, 22.0f, 55.0f, 75},  // Step 4: ALERT
-  {1600.0f, 22.0f, 55.0f, 75},  // Step 5: ALERT (3회 → ALERT 확정)
-  {900.0f,  22.0f, 55.0f, 70},  // Step 6: COMFORT (hysteresis)
-  {900.0f,  22.0f, 55.0f, 70},  // Step 7: COMFORT
-  {900.0f,  22.0f, 55.0f, 70},  // Step 8: COMFORT (3회 → COMFORT 확정)
-};
-
-#elif TEST_SCENARIO == 3
-static ScenarioStep scenario[] = {
-  {400.0f,  22.0f, 55.0f, 80},  // Step 0: COMFORT
-  {400.0f,  22.0f, 55.0f, 80},  // Step 1: COMFORT
-  {400.0f,  22.0f, 55.0f, 80},  // Step 2: COMFORT (3회 → COMFORT 확정)
-};
-#endif
-
-static int scenarioStep = 0;
-static int scenarioLen  = sizeof(scenario) / sizeof(scenario[0]);
 
 SensorData testSensorData = {
   TEST_CO2_DEFAULT,
@@ -57,35 +10,15 @@ SensorData testSensorData = {
 };
 
 bool sensorsInit() {
-  Serial.printf("TEST MODE: scenario %d\n", TEST_SCENARIO);
+  Serial.println("TEST MODE: sensors init skipped");
   return true;
 }
 
 bool sensorsMeasure(SensorData &data) {
-  if (scenarioStep < scenarioLen) {
-    testSensorData.co2_ppm     = scenario[scenarioStep].co2_ppm;
-    testSensorData.temperature = scenario[scenarioStep].temperature;
-    testSensorData.humidity    = scenario[scenarioStep].humidity;
-    testBatteryPct             = scenario[scenarioStep].battery_pct;
-
-    Serial.printf("TEST: step=%d co2=%.1f temp=%.1f humid=%.1f bat=%d%%\n",
-      scenarioStep,
-      testSensorData.co2_ppm,
-      testSensorData.temperature,
-      testSensorData.humidity,
-      testBatteryPct);
-
-    scenarioStep++;
-  } else {
-    Serial.println("TEST: scenario complete");
-  }
-
   data = testSensorData;
+  Serial.printf("TEST: co2=%.1f temp=%.1f humid=%.1f bat=%d%%\n",
+    data.co2_ppm, data.temperature, data.humidity, testBatteryPct);
   return true;
-}
-
-int getScenarioStep() {
-  return scenarioStep;
 }
 
 #else
@@ -96,7 +29,6 @@ static DHT dht(PIN_DHT, DHT_TYPE);
 bool sensorsInit() {
   Wire.begin();
 
-  // SCD41 초기화
   scd4x.begin(Wire, SCD41_I2C_ADDR_62);
 
   uint16_t error = scd4x.stopPeriodicMeasurement();
@@ -117,10 +49,8 @@ bool sensorsInit() {
     return false;
   }
 
-  // DHT11 초기화
   dht.begin();
 
-  // DHT11 통신 확인
   float temp = dht.readTemperature();
   float hum  = dht.readHumidity();
   if (isnan(temp) || isnan(hum)) {
@@ -133,7 +63,6 @@ bool sensorsInit() {
 }
 
 bool sensorsMeasure(SensorData &data) {
-  // DHT11 측정
   float temp = dht.readTemperature();
   float hum  = dht.readHumidity();
 
@@ -145,10 +74,8 @@ bool sensorsMeasure(SensorData &data) {
   data.temperature = temp;
   data.humidity    = hum;
 
-  // SCD41 온습도 보정
   scd4x.setTemperatureOffset(temp - 25.0f);
 
-  // SCD41 데이터 준비 확인
   bool isReady = false;
   uint16_t error = scd4x.getDataReadyStatus(isReady);
   if (error || !isReady) {
@@ -156,7 +83,6 @@ bool sensorsMeasure(SensorData &data) {
     return false;
   }
 
-  // SCD41 측정값 읽기
   uint16_t co2;
   float tempC, humRH;
   error = scd4x.readMeasurement(co2, tempC, humRH);
