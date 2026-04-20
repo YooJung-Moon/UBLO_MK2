@@ -5,7 +5,6 @@ extern uint8_t testBatteryPct;
 #endif
 
 #ifdef TEST_MODE
-
 // ── Scenario Data ─────────────────────────────
 struct ScenarioStep {
   float co2_ppm;
@@ -15,7 +14,6 @@ struct ScenarioStep {
 };
 
 #if TEST_SCENARIO == 1
-// COMFORT → WARNING → COMFORT
 static ScenarioStep scenario[] = {
   {400.0f,  22.0f, 55.0f, 80},  // Step 0: COMFORT
   {400.0f,  22.0f, 55.0f, 80},  // Step 1: COMFORT
@@ -29,7 +27,6 @@ static ScenarioStep scenario[] = {
 };
 
 #elif TEST_SCENARIO == 2
-// COMFORT → ALERT → COMFORT
 static ScenarioStep scenario[] = {
   {400.0f,  22.0f, 55.0f, 80},  // Step 0: COMFORT
   {400.0f,  22.0f, 55.0f, 80},  // Step 1: COMFORT
@@ -43,13 +40,10 @@ static ScenarioStep scenario[] = {
 };
 
 #elif TEST_SCENARIO == 3
-// Safe Mode 테스트 (정상 동작 후 패킷 중단)
 static ScenarioStep scenario[] = {
   {400.0f,  22.0f, 55.0f, 80},  // Step 0: COMFORT
   {400.0f,  22.0f, 55.0f, 80},  // Step 1: COMFORT
   {400.0f,  22.0f, 55.0f, 80},  // Step 2: COMFORT (3회 → COMFORT 확정)
-  // Step 3 이후는 패킷 전송 중단 시뮬레이션
-  // sensor_mcu.ino에서 STEP >= 3이면 espnowSend 건너뜀
 };
 #endif
 
@@ -90,7 +84,6 @@ bool sensorsMeasure(SensorData &data) {
   return true;
 }
 
-// ── Scenario Step Getter (sensor_mcu.ino에서 사용) ──
 int getScenarioStep() {
   return scenarioStep;
 }
@@ -98,24 +91,17 @@ int getScenarioStep() {
 #else
 // ── Real Mode ─────────────────────────────────
 static SensirionI2cScd4x scd4x;
-static SensirionI2cSht4x sht4x;
+static DHT dht(PIN_DHT, DHT_TYPE);
 
 bool sensorsInit() {
   Wire.begin();
 
-  sht4x.begin(Wire, SHT40_I2C_ADDR_44);
+  // SCD41 초기화
   scd4x.begin(Wire, SCD41_I2C_ADDR_62);
 
   uint16_t error = scd4x.stopPeriodicMeasurement();
   if (error) {
     Serial.println("SCD41 stop failed");
-    return false;
-  }
-
-  float tempC, humRH;
-  uint16_t shtError = sht4x.measureHighPrecision(tempC, humRH);
-  if (shtError) {
-    Serial.println("SHT4x init failed");
     return false;
   }
 
@@ -131,22 +117,38 @@ bool sensorsInit() {
     return false;
   }
 
+  // DHT11 초기화
+  dht.begin();
+
+  // DHT11 통신 확인
+  float temp = dht.readTemperature();
+  float hum  = dht.readHumidity();
+  if (isnan(temp) || isnan(hum)) {
+    Serial.println("DHT11 init failed");
+    return false;
+  }
+
   Serial.println("Sensors initialized");
   return true;
 }
 
 bool sensorsMeasure(SensorData &data) {
-  float tempC, humRH;
-  uint16_t shtError = sht4x.measureHighPrecision(tempC, humRH);
-  if (shtError) {
-    Serial.println("SHT4x measure failed");
+  // DHT11 측정
+  float temp = dht.readTemperature();
+  float hum  = dht.readHumidity();
+
+  if (isnan(temp) || isnan(hum)) {
+    Serial.println("DHT11 measure failed");
     return false;
   }
-  data.temperature = tempC;
-  data.humidity    = humRH;
 
-  scd4x.setTemperatureOffset(tempC - 25.0f);
+  data.temperature = temp;
+  data.humidity    = hum;
 
+  // SCD41 온습도 보정
+  scd4x.setTemperatureOffset(temp - 25.0f);
+
+  // SCD41 데이터 준비 확인
   bool isReady = false;
   uint16_t error = scd4x.getDataReadyStatus(isReady);
   if (error || !isReady) {
@@ -154,7 +156,9 @@ bool sensorsMeasure(SensorData &data) {
     return false;
   }
 
+  // SCD41 측정값 읽기
   uint16_t co2;
+  float tempC, humRH;
   error = scd4x.readMeasurement(co2, tempC, humRH);
   if (error) {
     Serial.println("SCD41 read failed");

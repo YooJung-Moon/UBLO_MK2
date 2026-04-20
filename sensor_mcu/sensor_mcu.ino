@@ -138,7 +138,6 @@ void loop() {
     case STATE_IDLE: {
       if (millis() - lastMeasureTime >= T_MEASURE) {
         lastMeasureTime = millis();
-        consecCount     = 0;
         currentState    = STATE_MEASURING;
       }
       break;
@@ -162,7 +161,6 @@ void loop() {
         consecCount = 1;
       }
 
-      // 디버그 추가
       Serial.printf("DEBUG: evaluated=%s current=%s consec=%d\n",
         evaluated == COMFORT ? "COMFORT" : evaluated == WARNING ? "WARNING" : "ALERT",
         airQualityState == COMFORT ? "COMFORT" : airQualityState == WARNING ? "WARNING" : "ALERT",
@@ -188,16 +186,15 @@ void loop() {
       FanCommand  fanCmd  = toFanCommand(airQualityState);
       GateCommand gateCmd = toGateCommand(airQualityState);
 
-    #ifdef TEST_MODE
-      // 시나리오 3: step 3 이후 패킷 전송 중단
-      #if TEST_SCENARIO == 3
+#ifdef TEST_MODE
+#if TEST_SCENARIO == 3
       if (getScenarioStep() >= 3) {
         Serial.println("TEST: scenario 3 — stopping packet transmission");
         currentState = STATE_SD_WRITE;
         break;
       }
-      #endif
-    #endif
+#endif
+#endif
 
       bool sent = false;
       retryCount = 0;

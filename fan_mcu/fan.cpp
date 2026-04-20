@@ -1,15 +1,23 @@
 #include "fan.h"
 
 void fanInit() {
-  pinMode(PIN_FAN_PWM, OUTPUT);
+  pinMode(PIN_FAN, OUTPUT);
   fanOff();
   Serial.println("Fan initialized");
 }
 
 void fanOn() {
-  analogWrite(PIN_FAN_PWM, map(FAN_PWM_ON, 0, 100, 0, 255));
+#ifndef TEST_MODE
+  digitalWrite(PIN_FAN, FAN_ON);
+#else
+  Serial.println("TEST: fan ON");
+#endif
 }
 
 void fanOff() {
-  analogWrite(PIN_FAN_PWM, 0);
+#ifndef TEST_MODE
+  digitalWrite(PIN_FAN, FAN_OFF);
+#else
+  Serial.println("TEST: fan OFF");
+#endif
 }

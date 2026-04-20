@@ -1,7 +1,6 @@
 #include "battery.h"
 
 #ifdef TEST_MODE
-// ── Test Mode Variables ───────────────────────
 uint8_t testBatteryPct = TEST_BAT_DEFAULT;
 
 bool batteryInit() {
@@ -16,40 +15,33 @@ uint8_t batteryReadPct() {
 
 #else
 // ── Real Mode ─────────────────────────────────
-#define BQ25798_ADDR  0x6B
-#define REG_VBAT_ADC  0x52
-#define VBAT_MAX      8400
-#define VBAT_MIN      6000
-
 bool batteryInit() {
-  Wire.beginTransmission(BQ25798_ADDR);
-  uint8_t error = Wire.endTransmission();
-  if (error != 0) {
-    Serial.println("BQ25798 init failed");
-    return false;
-  }
-  Serial.println("BQ25798 initialized");
+  pinMode(PIN_BAT_ADC, INPUT);
+  Serial.println("Battery ADC initialized");
   return true;
 }
 
 uint8_t batteryReadPct() {
-  Wire.beginTransmission(BQ25798_ADDR);
-  Wire.write(REG_VBAT_ADC);
-  Wire.endTransmission(false);
-  Wire.requestFrom(BQ25798_ADDR, 2);
-
-  if (Wire.available() < 2) {
-    Serial.println("BQ25798 read failed");
-    return 0;
+  // 여러 번 샘플링해서 평균 내기 (ADC 노이즈 감소)
+  uint32_t adcSum = 0;
+  for (int i = 0; i < 10; i++) {
+    adcSum += analogRead(PIN_BAT_ADC);
+    delay(5);
   }
+  float adcAvg = adcSum / 10.0f;
 
-  uint16_t raw    = (Wire.read() << 8) | Wire.read();
-  uint16_t vbat_mv = raw;
+  // ADC 값 → 전압 변환
+  float vPin = (adcAvg / BAT_ADC_RES) * BAT_ADC_VREF;
 
-  if (vbat_mv >= VBAT_MAX) return 100;
-  if (vbat_mv <= VBAT_MIN) return 0;
+  // 전압 분배 회로 역산 → 실제 배터리 전압
+  // Vbat = Vpin * (R_TOP + R_BOT) / R_BOT
+  float vBat = vPin * (BAT_R_TOP + BAT_R_BOT) / BAT_R_BOT;
 
-  return (uint8_t)((vbat_mv - VBAT_MIN) * 100 / (VBAT_MAX - VBAT_MIN));
+  // 전압 → 퍼센트 변환
+  if (vBat >= BAT_V_MAX) return 100;
+  if (vBat <= BAT_V_MIN) return 0;
+
+  return (uint8_t)((vBat - BAT_V_MIN) * 100.0f / (BAT_V_MAX - BAT_V_MIN));
 }
 #endif
 

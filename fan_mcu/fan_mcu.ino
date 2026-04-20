@@ -19,21 +19,6 @@ enum FanMcuState {
 FanMcuState currentState   = STATE_INIT;
 uint32_t    lastPacketTime = 0;
 
-// ── LED Helper ────────────────────────────────
-void setLed(uint8_t battery_pct) {
-  digitalWrite(PIN_LED_R, LOW);
-  digitalWrite(PIN_LED_G, LOW);
-  digitalWrite(PIN_LED_Y, LOW);
-
-  if (battery_pct >= 60) {
-    digitalWrite(PIN_LED_G, HIGH);
-  } else if (battery_pct >= 20) {
-    digitalWrite(PIN_LED_Y, millis() % 1000 < 500 ? HIGH : LOW);
-  } else {
-    digitalWrite(PIN_LED_R, millis() % 500 < 250 ? HIGH : LOW);
-  }
-}
-
 // ── Serial Command Parser (TEST_MODE only) ────
 #ifdef TEST_MODE
 void parseSerialCommand() {
@@ -94,10 +79,6 @@ void setup() {
 
   Serial.println("Fan MCU booting...");
 
-  pinMode(PIN_LED_R, OUTPUT);
-  pinMode(PIN_LED_G, OUTPUT);
-  pinMode(PIN_LED_Y, OUTPUT);
-
   gateInit();
   fanInit();
 
@@ -134,7 +115,7 @@ void loop() {
         gateStop();
         gateSetState(GATE_STATE_CLOSED);
         Serial.println("GATE_CLOSING → STANDBY");
-        lastPacketTime = millis() + 60000;  // 초기 60초 유예 추가
+        lastPacketTime = millis() + 60000;  // 초기 60초 유예
         currentState   = STATE_STANDBY;
       } else if (isGateTimedOut()) {
         gateStop();
@@ -147,7 +128,6 @@ void loop() {
     // ── STANDBY ───────────────────────────────
     case STATE_STANDBY: {
       if (newPacketReceived) {
-        setLed(latestPacket.battery_pct);
         lastPacketTime = millis();
         sensor_to_fan_t packet;
         memcpy(&packet, (void *)&latestPacket, sizeof(sensor_to_fan_t));
@@ -187,7 +167,6 @@ void loop() {
     // ── FAN_RUNNING ───────────────────────────
     case STATE_FAN_RUNNING: {
       if (newPacketReceived) {
-        setLed(latestPacket.battery_pct);
         lastPacketTime = millis();
         sensor_to_fan_t packet;
         memcpy(&packet, (void *)&latestPacket, sizeof(sensor_to_fan_t));
@@ -249,9 +228,6 @@ void loop() {
         Serial.println("ERROR: manual reset required");
         errorLogged = true;
       }
-      digitalWrite(PIN_LED_R, millis() % 500 < 250 ? HIGH : LOW);
-      digitalWrite(PIN_LED_G, LOW);
-      digitalWrite(PIN_LED_Y, LOW);
       delay(100);
       break;
     }

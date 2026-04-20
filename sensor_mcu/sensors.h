@@ -2,8 +2,11 @@
 
 #include <Arduino.h>
 #include <SensirionI2cScd4x.h>
-#include <SensirionI2cSht4x.h>
 #include "config.h"
+
+#ifndef TEST_MODE
+#include <DHT.h>
+#endif
 
 // ── Air Quality State ─────────────────────────
 enum AirQualityState {
