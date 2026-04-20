@@ -1,5 +1,8 @@
 #pragma once
 
+// ── Board Selection ───────────────────────────
+#define BOARD_XIAO   // 주석 처리하면 Arduino Nano ESP32 기준
+
 // ── Build Mode ───────────────────────────────
 #define TEST_MODE   // 주석 처리하면 실제 모드로 전환
 
@@ -37,16 +40,27 @@
 #define ESPNOW_CHANNEL        1
 
 // ── SD Card SPI Pins ─────────────────────────
-#define PIN_SD_CS    5
-#define PIN_SD_MOSI  9
-#define PIN_SD_MISO  8
-#define PIN_SD_SCK   7
+#ifdef BOARD_XIAO
+  #define PIN_SD_CS    D3
+  #define PIN_SD_MOSI  D10
+  #define PIN_SD_MISO  D9
+  #define PIN_SD_SCK   D8
+#else  // Arduino Nano ESP32
+  #define PIN_SD_CS    5
+  #define PIN_SD_MOSI  9
+  #define PIN_SD_MISO  8
+  #define PIN_SD_SCK   7
+#endif
 
 // ── SD Card ──────────────────────────────────
 #define SD_FILENAME  "/ublo_log.csv"
 
 // ── Battery ADC ──────────────────────────────
-#define PIN_BAT_ADC     A0
+#ifdef BOARD_XIAO
+  #define PIN_BAT_ADC  A0
+#else
+  #define PIN_BAT_ADC  A0
+#endif
 #define BAT_ADC_RES     4095
 #define BAT_ADC_VREF    3.3f
 #define BAT_R_TOP       100.0f
@@ -55,7 +69,11 @@
 #define BAT_V_MIN       3.0f
 
 // ── DHT Sensor ───────────────────────────────
-#define PIN_DHT         2
+#ifdef BOARD_XIAO
+  #define PIN_DHT   D2
+#else
+  #define PIN_DHT   2
+#endif
 #define DHT_TYPE        DHT11
 
 // ── Test Mode Default Values ─────────────────
