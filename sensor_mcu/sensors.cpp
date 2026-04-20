@@ -1,6 +1,10 @@
 #include "sensors.h"
 
 #ifdef TEST_MODE
+extern uint8_t testBatteryPct;
+#endif
+
+#ifdef TEST_MODE
 
 // ── Scenario Data ─────────────────────────────
 struct ScenarioStep {
@@ -57,8 +61,6 @@ SensorData testSensorData = {
   TEST_TEMP_DEFAULT,
   TEST_HUMID_DEFAULT
 };
-
-uint8_t testBatteryPct = TEST_BAT_DEFAULT;
 
 bool sensorsInit() {
   Serial.printf("TEST MODE: scenario %d\n", TEST_SCENARIO);
