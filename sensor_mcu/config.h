@@ -3,13 +3,6 @@
 // ── Build Mode ───────────────────────────────
 #define TEST_MODE   // 주석 처리하면 실제 모드로 전환
 
-// ── Test Scenario ─────────────────────────────
-#ifdef TEST_MODE
-#define TEST_SCENARIO  1   // 1: COMFORT→WARNING→COMFORT
-                           // 2: COMFORT→ALERT→COMFORT
-                           // 3: Safe Mode
-#endif
-
 // ── MAC Address ──────────────────────────────
 #define RECEIVER_MAC {0xE0, 0x72, 0xA1, 0xF8, 0xF6, 0x0C}  // Fan MCU MAC
 
@@ -44,7 +37,6 @@
 #define ESPNOW_CHANNEL        1
 
 // ── SD Card SPI Pins ─────────────────────────
-// 실제 모듈 연결 후 핀 번호 업데이트 필요
 #define PIN_SD_CS    5
 #define PIN_SD_MOSI  9
 #define PIN_SD_MISO  8
@@ -54,19 +46,17 @@
 #define SD_FILENAME  "/ublo_log.csv"
 
 // ── Battery ADC ──────────────────────────────
-// 실제 연결 후 핀 번호 업데이트 필요
-#define PIN_BAT_ADC     A0      // 배터리 전압 분배 회로 ADC 핀
-#define BAT_ADC_RES     4095    // ESP32 ADC 12bit 해상도
-#define BAT_ADC_VREF    3.3f    // ADC 기준 전압 (V)
-#define BAT_R_TOP       100.0f  // 전압 분배 상단 저항 (kΩ) - 확정 후 업데이트
-#define BAT_R_BOT       100.0f  // 전압 분배 하단 저항 (kΩ) - 확정 후 업데이트
-#define BAT_V_MAX       4.2f    // 1S Li-ion 만충 전압 (V)
-#define BAT_V_MIN       3.0f    // 1S Li-ion 방전 컷오프 전압 (V)
+#define PIN_BAT_ADC     A0
+#define BAT_ADC_RES     4095
+#define BAT_ADC_VREF    3.3f
+#define BAT_R_TOP       100.0f
+#define BAT_R_BOT       100.0f
+#define BAT_V_MAX       4.2f
+#define BAT_V_MIN       3.0f
 
 // ── DHT Sensor ───────────────────────────────
-// 실제 연결 후 핀 번호 업데이트 필요
-#define PIN_DHT         2       // SZH-EK024 데이터 핀
-#define DHT_TYPE        DHT11   // DHT11 타입
+#define PIN_DHT         2
+#define DHT_TYPE        DHT11
 
 // ── Test Mode Default Values ─────────────────
 #ifdef TEST_MODE

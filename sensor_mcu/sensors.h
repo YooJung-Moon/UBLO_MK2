@@ -26,7 +26,6 @@ struct SensorData {
 #ifdef TEST_MODE
 extern SensorData testSensorData;
 extern uint8_t testBatteryPct;
-int getScenarioStep();
 #endif
 
 // ── Function Declarations ─────────────────────
