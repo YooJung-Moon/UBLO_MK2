@@ -14,6 +14,7 @@ enum GateState {
 #ifdef TEST_MODE
 extern bool testLimitOpen;
 extern bool testLimitClosed;
+void scenarioUpdateLimitSwitch(bool opening);
 #endif
 
 // ── Function Declarations ─────────────────────

@@ -1,23 +1,96 @@
 #include "sensors.h"
 
 #ifdef TEST_MODE
-// ── Test Mode Variables ───────────────────────
+
+// ── Scenario Data ─────────────────────────────
+struct ScenarioStep {
+  float co2_ppm;
+  float temperature;
+  float humidity;
+  uint8_t battery_pct;
+};
+
+#if TEST_SCENARIO == 1
+// COMFORT → WARNING → COMFORT
+static ScenarioStep scenario[] = {
+  {400.0f,  22.0f, 55.0f, 80},  // Step 0: COMFORT
+  {400.0f,  22.0f, 55.0f, 80},  // Step 1: COMFORT
+  {400.0f,  22.0f, 55.0f, 80},  // Step 2: COMFORT (3회 → COMFORT 확정)
+  {1200.0f, 22.0f, 55.0f, 75},  // Step 3: WARNING
+  {1200.0f, 22.0f, 55.0f, 75},  // Step 4: WARNING
+  {1200.0f, 22.0f, 55.0f, 75},  // Step 5: WARNING (3회 → WARNING 확정)
+  {900.0f,  22.0f, 55.0f, 70},  // Step 6: COMFORT (hysteresis)
+  {900.0f,  22.0f, 55.0f, 70},  // Step 7: COMFORT
+  {900.0f,  22.0f, 55.0f, 70},  // Step 8: COMFORT (3회 → COMFORT 확정)
+};
+
+#elif TEST_SCENARIO == 2
+// COMFORT → ALERT → COMFORT
+static ScenarioStep scenario[] = {
+  {400.0f,  22.0f, 55.0f, 80},  // Step 0: COMFORT
+  {400.0f,  22.0f, 55.0f, 80},  // Step 1: COMFORT
+  {400.0f,  22.0f, 55.0f, 80},  // Step 2: COMFORT (3회 → COMFORT 확정)
+  {1600.0f, 22.0f, 55.0f, 75},  // Step 3: ALERT
+  {1600.0f, 22.0f, 55.0f, 75},  // Step 4: ALERT
+  {1600.0f, 22.0f, 55.0f, 75},  // Step 5: ALERT (3회 → ALERT 확정)
+  {900.0f,  22.0f, 55.0f, 70},  // Step 6: COMFORT (hysteresis)
+  {900.0f,  22.0f, 55.0f, 70},  // Step 7: COMFORT
+  {900.0f,  22.0f, 55.0f, 70},  // Step 8: COMFORT (3회 → COMFORT 확정)
+};
+
+#elif TEST_SCENARIO == 3
+// Safe Mode 테스트 (정상 동작 후 패킷 중단)
+static ScenarioStep scenario[] = {
+  {400.0f,  22.0f, 55.0f, 80},  // Step 0: COMFORT
+  {400.0f,  22.0f, 55.0f, 80},  // Step 1: COMFORT
+  {400.0f,  22.0f, 55.0f, 80},  // Step 2: COMFORT (3회 → COMFORT 확정)
+  // Step 3 이후는 패킷 전송 중단 시뮬레이션
+  // sensor_mcu.ino에서 STEP >= 3이면 espnowSend 건너뜀
+};
+#endif
+
+static int scenarioStep = 0;
+static int scenarioLen  = sizeof(scenario) / sizeof(scenario[0]);
+
 SensorData testSensorData = {
   TEST_CO2_DEFAULT,
   TEST_TEMP_DEFAULT,
   TEST_HUMID_DEFAULT
 };
 
+uint8_t testBatteryPct = TEST_BAT_DEFAULT;
+
 bool sensorsInit() {
-  Serial.println("TEST MODE: sensors init skipped");
+  Serial.printf("TEST MODE: scenario %d\n", TEST_SCENARIO);
   return true;
 }
 
 bool sensorsMeasure(SensorData &data) {
+  if (scenarioStep < scenarioLen) {
+    testSensorData.co2_ppm     = scenario[scenarioStep].co2_ppm;
+    testSensorData.temperature = scenario[scenarioStep].temperature;
+    testSensorData.humidity    = scenario[scenarioStep].humidity;
+    testBatteryPct             = scenario[scenarioStep].battery_pct;
+
+    Serial.printf("TEST: step=%d co2=%.1f temp=%.1f humid=%.1f bat=%d%%\n",
+      scenarioStep,
+      testSensorData.co2_ppm,
+      testSensorData.temperature,
+      testSensorData.humidity,
+      testBatteryPct);
+
+    scenarioStep++;
+  } else {
+    Serial.println("TEST: scenario complete");
+  }
+
   data = testSensorData;
-  Serial.printf("TEST MODE: co2=%.1f temp=%.1f humid=%.1f\n",
-    data.co2_ppm, data.temperature, data.humidity);
   return true;
+}
+
+// ── Scenario Step Getter (sensor_mcu.ino에서 사용) ──
+int getScenarioStep() {
+  return scenarioStep;
 }
 
 #else

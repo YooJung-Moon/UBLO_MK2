@@ -182,6 +182,17 @@ void loop() {
       FanCommand  fanCmd  = toFanCommand(airQualityState);
       GateCommand gateCmd = toGateCommand(airQualityState);
 
+    #ifdef TEST_MODE
+      // 시나리오 3: step 3 이후 패킷 전송 중단
+      #if TEST_SCENARIO == 3
+      if (getScenarioStep() >= 3) {
+        Serial.println("TEST: scenario 3 — stopping packet transmission");
+        currentState = STATE_SD_WRITE;
+        break;
+      }
+      #endif
+    #endif
+
       bool sent = false;
       retryCount = 0;
 
