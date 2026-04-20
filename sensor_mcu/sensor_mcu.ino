@@ -138,7 +138,6 @@ void loop() {
     case STATE_IDLE: {
       if (millis() - lastMeasureTime >= T_MEASURE) {
         lastMeasureTime = millis();
-        consecCount     = 0;
         currentState    = STATE_MEASURING;
       }
       break;
@@ -156,10 +155,12 @@ void loop() {
 
       AirQualityState evaluated = evaluateAirQuality(sensorData, airQualityState);
 
-      if (evaluated == airQualityState) {
+      static AirQualityState lastEvaluated = COMFORT;
+      if (evaluated == lastEvaluated) {
         consecCount++;
       } else {
-        consecCount = 1;
+        consecCount   = 1;
+        lastEvaluated = evaluated;
       }
 
       // 디버그 추가
@@ -172,12 +173,14 @@ void loop() {
         prevAirQualityState = airQualityState;
         airQualityState     = evaluated;
         consecCount         = 0;
-        Serial.printf("State: %s → %s\n",
-          prevAirQualityState == COMFORT ? "COMFORT" :
-          prevAirQualityState == WARNING ? "WARNING" : "ALERT",
-          airQualityState == COMFORT ? "COMFORT" :
-          airQualityState == WARNING ? "WARNING" : "ALERT");
-      }
+        if (prevAirQualityState != airQualityState) {  // 상태가 실제로 바뀔 때만 출력
+          Serial.printf("State: %s → %s\n",
+            prevAirQualityState == COMFORT ? "COMFORT" :
+            prevAirQualityState == WARNING ? "WARNING" : "ALERT",
+            airQualityState == COMFORT ? "COMFORT" :
+            airQualityState == WARNING ? "WARNING" : "ALERT");
+  }
+}
 
       currentState = STATE_TRANSMIT;
       break;
