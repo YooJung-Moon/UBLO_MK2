@@ -19,6 +19,23 @@ enum FanMcuState {
 FanMcuState currentState   = STATE_INIT;
 uint32_t    lastPacketTime = 0;
 
+// ── Button Debounce ───────────────────────────
+static uint32_t lastButtonTime  = 0;
+static bool     lastButtonState = HIGH;
+#define DEBOUNCE_MS  50
+
+bool isButtonPressed() {
+  bool current = digitalRead(PIN_BUTTON);
+  if (current == LOW && lastButtonState == HIGH &&
+      millis() - lastButtonTime > DEBOUNCE_MS) {
+    lastButtonTime  = millis();
+    lastButtonState = current;
+    return true;
+  }
+  lastButtonState = current;
+  return false;
+}
+
 // ── Serial Command Parser (TEST_MODE only) ────
 #ifdef TEST_MODE
 void parseSerialCommand() {
@@ -27,22 +44,7 @@ void parseSerialCommand() {
   String input = Serial.readStringUntil('\n');
   input.trim();
 
-  if (input == "lim:open") {
-    testLimitOpen   = true;
-    testLimitClosed = false;
-    Serial.println("TEST: limit switch OPEN");
-
-  } else if (input == "lim:close") {
-    testLimitOpen   = false;
-    testLimitClosed = true;
-    Serial.println("TEST: limit switch CLOSE");
-
-  } else if (input == "lim:none") {
-    testLimitOpen   = false;
-    testLimitClosed = false;
-    Serial.println("TEST: limit switch NONE (moving)");
-
-  } else if (input == "status") {
+  if (input == "status") {
     Serial.println("── Status ──────────────────");
     Serial.printf("FSM state   : %s\n",
       currentState == STATE_INIT         ? "INIT" :
@@ -56,9 +58,6 @@ void parseSerialCommand() {
 
   } else if (input == "help") {
     Serial.println("── Commands ────────────────");
-    Serial.println("lim:open    limit switch OPEN");
-    Serial.println("lim:close   limit switch CLOSE");
-    Serial.println("lim:none    no limit switch");
     Serial.println("status      show current state");
 
   } else {
@@ -79,6 +78,8 @@ void setup() {
 
   Serial.println("Fan MCU booting...");
 
+  pinMode(PIN_BUTTON, INPUT_PULLUP);
+
   gateInit();
   fanInit();
 
@@ -95,16 +96,17 @@ void setup() {
 void loop() {
 #ifdef TEST_MODE
   parseSerialCommand();
+  isGateMoveComplete();  // 딜레이 타이머 체크
 #endif
+
+  bool buttonPressed = isButtonPressed();
 
   switch (currentState) {
 
     // ── INIT ──────────────────────────────────
     case STATE_INIT: {
       Serial.println("INIT: closing gate");
-      gateClose();
-      delay(100);
-      gateStartTimer();
+      gateClose();  // 내부에서 타이머 시작
       currentState = STATE_GATE_CLOSING;
       break;
     }
@@ -115,13 +117,14 @@ void loop() {
         gateStop();
         gateSetState(GATE_STATE_CLOSED);
         Serial.println("GATE_CLOSING → STANDBY");
-        lastPacketTime = millis(); 
+        lastPacketTime = millis();
         currentState   = STATE_STANDBY;
       } else if (isGateTimedOut()) {
         gateStop();
         Serial.println("GATE_CLOSING: timeout → ERROR");
         currentState = STATE_ERROR;
       }
+      // 게이트 이동 중 버튼 무시
       break;
     }
 
@@ -135,10 +138,15 @@ void loop() {
 
         if (packet.command == CMD_ON) {
           Serial.println("STANDBY: command=ON → GATE_OPENING");
-          gateOpen();
-          gateStartTimer();
+          gateOpen();  // 내부에서 타이머 시작
           currentState = STATE_GATE_OPENING;
         }
+      }
+
+      if (buttonPressed) {
+        Serial.println("STANDBY: button pressed → GATE_OPENING");
+        gateOpen();  // 내부에서 타이머 시작
+        currentState = STATE_GATE_OPENING;
       }
 
       if (millis() - lastPacketTime > T_NO_PACKET) {
@@ -161,6 +169,7 @@ void loop() {
         Serial.println("GATE_OPENING: timeout → ERROR");
         currentState = STATE_ERROR;
       }
+      // 게이트 이동 중 버튼 무시
       break;
     }
 
@@ -175,10 +184,16 @@ void loop() {
         if (packet.command == CMD_OFF) {
           fanOff();
           Serial.println("FAN_RUNNING: command=OFF → GATE_CLOSING");
-          gateClose();
-          gateStartTimer();
+          gateClose();  // 내부에서 타이머 시작
           currentState = STATE_GATE_CLOSING;
         }
+      }
+
+      if (buttonPressed) {
+        fanOff();
+        Serial.println("FAN_RUNNING: button pressed → GATE_CLOSING");
+        gateClose();  // 내부에서 타이머 시작
+        currentState = STATE_GATE_CLOSING;
       }
 
       if (millis() - lastPacketTime > T_NO_PACKET) {
@@ -198,14 +213,24 @@ void loop() {
         fanOff();
         Serial.println("SAFE_MODE: fan OFF, closing gate");
         safeModeLogged = true;
+        gateClose();  // 내부에서 타이머 시작
       }
 
       if (!isLimitSwitchClosed()) {
-        gateClose();
-        gateStartTimer();
+        if (isGateTimedOut()) {
+          gateClose();  // 타임아웃 시 재시도
+        }
       } else if (!gateStopLogged) {
         gateStop();
         gateStopLogged = true;
+      }
+
+      if (buttonPressed) {
+        safeModeLogged = false;
+        gateStopLogged = false;
+        Serial.println("SAFE_MODE: button pressed → GATE_OPENING");
+        gateOpen();  // 내부에서 타이머 시작
+        currentState = STATE_GATE_OPENING;
       }
 
       if (newPacketReceived) {
@@ -227,6 +252,12 @@ void loop() {
         gateStop();
         Serial.println("ERROR: manual reset required");
         errorLogged = true;
+      }
+
+      if (buttonPressed) {
+        Serial.println("ERROR: button pressed → INIT");
+        errorLogged  = false;
+        currentState = STATE_INIT;
       }
       delay(100);
       break;

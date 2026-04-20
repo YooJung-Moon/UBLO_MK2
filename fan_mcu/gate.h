@@ -26,6 +26,5 @@ void gateStop();
 bool isLimitSwitchOpen();
 bool isLimitSwitchClosed();
 bool isGateTimedOut();
-void gateStartTimer();
 GateState gateGetState();
 void gateSetState(GateState state);

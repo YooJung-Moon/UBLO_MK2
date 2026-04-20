@@ -56,6 +56,7 @@ void gateInit() {
 
 void gateOpen() {
   gateState = GATE_STATE_MOVING;
+  gateMoveStart = millis();  // 타이머 시작
 #ifndef TEST_MODE
   digitalWrite(PIN_MOTOR_IN1, HIGH);
   digitalWrite(PIN_MOTOR_IN2, LOW);
@@ -67,6 +68,7 @@ void gateOpen() {
 
 void gateClose() {
   gateState = GATE_STATE_MOVING;
+  gateMoveStart = millis();  // 타이머 시작
 #ifndef TEST_MODE
   digitalWrite(PIN_MOTOR_IN1, LOW);
   digitalWrite(PIN_MOTOR_IN2, HIGH);
