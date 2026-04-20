@@ -7,7 +7,7 @@
 #define TEST_MODE   // 주석 처리하면 실제 모드로 전환
 
 // ── Timers (ms) ──────────────────────────────
-#define T_NO_PACKET     60000   // 패킷 미수신 타임아웃 60s → SAFE_MODE
+#define T_NO_PACKET     600000   // 테스트 10분, 실제 패킷 미수신 타임아웃 60s → SAFE_MODE
 #define T_GATE          5000    // 게이트 모터 타임아웃 5s → ERROR
 
 // ── Fan Control ──────────────────────────────

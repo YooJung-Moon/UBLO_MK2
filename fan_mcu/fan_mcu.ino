@@ -115,7 +115,7 @@ void loop() {
         gateStop();
         gateSetState(GATE_STATE_CLOSED);
         Serial.println("GATE_CLOSING → STANDBY");
-        lastPacketTime = millis() + 60000;  // 초기 60초 유예
+        lastPacketTime = millis();  // 초기 60초 유예
         currentState   = STATE_STANDBY;
       } else if (isGateTimedOut()) {
         gateStop();
