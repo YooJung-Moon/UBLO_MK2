@@ -166,10 +166,10 @@ void loop() {
       prevEvaluated = evaluated;
 
       Serial.printf("DEBUG: evaluated=%s current=%s consec=%d\n",
-        evaluated == COMFORT ? "COMFORT" : evaluated == WARNING ? "WARNING" : "ALERT",
-        airQualityState == COMFORT ? "COMFORT" : airQualityState == WARNING ? "WARNING" : "ALERT",
+        evaluated == COMFORT ? "COMFORT" : "WARNING",
+        airQualityState == COMFORT ? "COMFORT" : "WARNING",
         consecCount);
-
+      
       if (consecCount >= CONSEC_THRESHOLD) {
         if (evaluated != airQualityState) {
           prevAirQualityState = airQualityState;
@@ -177,10 +177,8 @@ void loop() {
           consecCount         = 0;
           prevEvaluated       = evaluated;
           Serial.printf("State: %s → %s\n",
-            prevAirQualityState == COMFORT ? "COMFORT" :
-            prevAirQualityState == WARNING ? "WARNING" : "ALERT",
-            airQualityState == COMFORT ? "COMFORT" :
-            airQualityState == WARNING ? "WARNING" : "ALERT");
+            prevAirQualityState == COMFORT ? "COMFORT" : "WARNING",
+            airQualityState == COMFORT ? "COMFORT" : "WARNING");
         } else {
           consecCount = 0;
         }

@@ -99,11 +99,11 @@ bool sensorsMeasure(SensorData &data) {
 AirQualityState evaluateAirQuality(const SensorData &data, AirQualityState currentState) {
   AirQualityState newState = COMFORT;
 
-  if (data.co2_ppm > CO2_ALERT) {
-    newState = ALERT;
-  } else if (data.co2_ppm > CO2_WARNING) {
+  // CO₂ 기준 판단
+  if (data.co2_ppm > CO2_WARNING) {
     newState = WARNING;
   } else {
+    // CO₂가 COMFORT일 때만 온습도로 WARNING 가능
     if (data.temperature < TEMP_LOW || data.temperature > TEMP_HIGH ||
         data.humidity    < HUMID_LOW || data.humidity    > HUMID_HIGH) {
       newState = WARNING;
@@ -112,10 +112,9 @@ AirQualityState evaluateAirQuality(const SensorData &data, AirQualityState curre
     }
   }
 
+  // Hysteresis: 하향 전이 시 조건 확인
   if (newState < currentState) {
-    if (currentState == ALERT) {
-      if (data.co2_ppm > CO2_ALERT_HYST) return currentState;
-    } else if (currentState == WARNING) {
+    if (currentState == WARNING) {
       if (data.co2_ppm > CO2_WARNING_HYST     ||
           data.temperature < TEMP_LOW_HYST    ||
           data.temperature > TEMP_HIGH_HYST   ||
