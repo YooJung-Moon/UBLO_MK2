@@ -11,7 +11,7 @@
 #endif
 
 // ── Timers (ms) ──────────────────────────────
-#define T_NO_PACKET     30000   // 패킷 미수신 타임아웃 30s → SAFE_MODE
+#define T_NO_PACKET     60000   // 테스트용60s, 패킷 미수신 타임아웃 30s → SAFE_MODE
 #define T_GATE          5000    // 게이트 모터 타임아웃 5s → ERROR
 
 // ── Fan PWM ──────────────────────────────────

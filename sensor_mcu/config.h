@@ -14,8 +14,8 @@
 #define RECEIVER_MAC {0xE0, 0x72, 0xA1, 0xF8, 0xF6, 0x0C}
 
 // ── Timers (ms) ──────────────────────────────
-#define T_MEASURE       5000    // 테스트용 5s (실제: 30000)
-#define T_SD_WRITE      5000    // 테스트용 5s (실제: 30000)
+#define T_MEASURE       10000    // 테스트용 10s (실제: 30000)
+#define T_SD_WRITE      10000    // 테스트용 10s (실제: 30000)
 
 // ── Air Quality Thresholds ───────────────────
 #define CO2_WARNING          1000.0f
