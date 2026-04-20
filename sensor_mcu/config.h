@@ -7,8 +7,8 @@
 #define RECEIVER_MAC {0xE0, 0x72, 0xA1, 0xF8, 0xF6, 0x0C}  // Fan MCU MAC
 
 // ── Timers (ms) ──────────────────────────────
-#define T_MEASURE       30000   // 측정 주기 30s
-#define T_SD_WRITE      30000   // SD 카드 저장 주기 30s (T_MEASURE와 동기화)
+#define T_MEASURE       5000   // 측정 주기 30s
+#define T_SD_WRITE      5000   // SD 카드 저장 주기 30s (T_MEASURE와 동기화)
 
 // ── Air Quality Thresholds ───────────────────
 #define CO2_WARNING          1000.0f  // CO₂ WARNING 상향 기준 (ppm)
