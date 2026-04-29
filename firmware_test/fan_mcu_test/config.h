@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>
 
 // ESP-NOW
 uint8_t SENSOR_MCU_MAC[] = {0x20, 0x6E, 0xF1, 0x31, 0x25, 0x44};
