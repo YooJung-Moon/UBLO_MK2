@@ -1,20 +1,22 @@
 #include "sensors.h"
 
-static SensirionI2CScd4x scd4x;
+static SensirionI2cScd4x scd4x;
 
 bool sensors_init() {
     Wire.begin();
-    scd4x.begin(Wire);
+    scd4x.begin(Wire, SCD41_I2C_ADDR_62);
 
-    uint16_t error = scd4x.stopPeriodicMeasurement();
-    if (error) {
-        Serial.println("SCD41 stop failed");
-        return false;
-    }
+    uint16_t error;
+    char errorMessage[256];
+
+    error = scd4x.stopPeriodicMeasurement();
+    delay(500);
 
     error = scd4x.startPeriodicMeasurement();
     if (error) {
-        Serial.println("SCD41 start failed");
+        errorToString(error, errorMessage, 256);
+        Serial.print("SCD41 start failed: ");
+        Serial.println(errorMessage);
         return false;
     }
 
@@ -22,16 +24,19 @@ bool sensors_init() {
     return true;
 }
 
-bool sensors_read(float &co2, float &temperature, float &humidity) {
-    bool isDataReady = false;
-    uint16_t error = scd4x.getDataReadyFlag(isDataReady);
-    if (error || !isDataReady) {
-        return false;
-    }
+bool sensors_read(uint16_t &co2, float &temperature, float &humidity) {
+    uint16_t error;
+    char errorMessage[256];
 
     error = scd4x.readMeasurement(co2, temperature, humidity);
     if (error) {
-        Serial.println("SCD41 read failed");
+        errorToString(error, errorMessage, 256);
+        Serial.print("SCD41 read failed: ");
+        Serial.println(errorMessage);
+        return false;
+    }
+
+    if (co2 == 0) {
         return false;
     }
 

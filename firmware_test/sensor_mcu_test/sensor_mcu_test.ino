@@ -5,7 +5,9 @@
 static unsigned long last_sensor_time = 0;
 
 void setup() {
+    delay(3000);
     Serial.begin(115200);
+    while (!Serial);
     comms_init();
     if (!sensors_init()) {
         Serial.println("Sensor init failed, halting");
@@ -19,7 +21,8 @@ void loop() {
     if (now - last_sensor_time >= SENSOR_INTERVAL) {
         last_sensor_time = now;
 
-        float co2, temperature, humidity;
+        uint16_t co2;
+        float temperature, humidity;
         if (!sensors_read(co2, temperature, humidity)) {
             Serial.println("Sensor read failed, skipping");
             return;

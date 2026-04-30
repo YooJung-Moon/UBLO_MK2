@@ -2,7 +2,7 @@
 #include "config.h"
 
 static command_packet_t last_command;
-static bool command_available = false;
+static volatile bool command_available = false;
 
 void on_data_recv(const uint8_t *mac, const uint8_t *data, int len) {
     if (len == sizeof(command_packet_t)) {
