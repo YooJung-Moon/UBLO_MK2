@@ -2,7 +2,7 @@
 #define MOTOR_IN2  3
 #define LIM_OPEN   5
 #define LIM_CLOSE  6
-#define FAN_PWM    18
+#define FAN_PWM    9
 
 void motorCW() {
     digitalWrite(MOTOR_IN1, HIGH);

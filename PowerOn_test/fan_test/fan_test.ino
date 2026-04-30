@@ -1,25 +1,27 @@
-#define FAN_PIN 18  
+#define FAN_PIN 9  
 
 #define PWM_CHANNEL 0
 #define PWM_FREQ 25000
-#define PWM_RESOLUTION 8   // 0~255
+#define PWM_RESOLUTION 8
 
 void setup() {
+  Serial.begin(115200);
+  delay(1000);
+
+  Serial.println("Fan PWM test start");
+
   ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
   ledcAttachPin(FAN_PIN, PWM_CHANNEL);
+
+  Serial.println("PWM attached to GPIO18");
 }
 
 void loop() {
+  Serial.println("Fan duty 255");
+  ledcWrite(PWM_CHANNEL, 255);
+  delay(3000);
 
-  // 점점 속도 증가
-  for (int duty = 0; duty <= 255; duty++) {
-    ledcWrite(PWM_CHANNEL, duty);
-    delay(20);
-  }
-
-  // 점점 속도 감소
-  for (int duty = 255; duty >= 0; duty--) {
-    ledcWrite(PWM_CHANNEL, duty);
-    delay(20);
-  }
+  Serial.println("Fan duty 0");
+  ledcWrite(PWM_CHANNEL, 0);
+  delay(3000);
 }
