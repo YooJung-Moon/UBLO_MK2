@@ -1,48 +1,73 @@
 #include "config.h"
-#include "comms.h"
 #include "sensors.h"
+#include "buffer.h"
+#include "rtc.h"
+#include "logic.h"
+#include "sdcard.h"
+#include "comms.h"
 
 static unsigned long last_sensor_time = 0;
+static int sample_count = 0;
 
 void setup() {
     delay(3000);
     Serial.begin(115200);
     while (!Serial);
+
+    rtc_init();
+    sdcard_init();
     comms_init();
+
     if (!sensors_init()) {
         Serial.println("Sensor init failed, halting");
         while (true);
     }
-    Serial.println("Sensor MCU test ready");
+
+    buffer_init();
+    Serial.println("Sensor MCU ready");
+    Serial.println("timestamp, co2, temp, humidity, mode, fan_cmd, cover_cmd");
 }
 
 void loop() {
     unsigned long now = millis();
+
+    // 10초 주기: sensor 읽기 + raw logging + 버퍼 추가
     if (now - last_sensor_time >= SENSOR_INTERVAL) {
         last_sensor_time = now;
 
         uint16_t co2;
-        float temperature, humidity;
-        if (!sensors_read(co2, temperature, humidity)) {
+        float temp, humidity;
+        if (!sensors_read(co2, temp, humidity)) {
             Serial.println("Sensor read failed, skipping");
             return;
         }
 
-        Serial.print("CO2: "); Serial.print(co2);
-        Serial.print(" | Temp: "); Serial.print(temperature);
-        Serial.print(" | Humidity: "); Serial.println(humidity);
+        String ts = rtc_timestamp();
+        sdcard_log_raw(ts, co2, temp, humidity);
+        buffer_add(co2);
+        sample_count++;
 
-        command_packet_t packet;
-        if (co2 >= CO2_GOOD) {
-            packet.fan_cmd   = 1; // ON
-            packet.cover_cmd = 1; // OPEN
-            Serial.println("Decision: VENTILATE");
-        } else {
-            packet.fan_cmd   = 0; // OFF
-            packet.cover_cmd = 0; // CLOSE
-            Serial.println("Decision: IDLE");
+        // 10분 주기: 60개 측정값 누적 시 판단
+        if (sample_count >= BUFFER_SIZE) {
+            sample_count = 0;
+
+            uint16_t avg_co2 = buffer_average();
+            Serial.print("[LOGIC] avg CO2: ");
+            Serial.println(avg_co2);
+
+            command_packet_t cmd = logic_decide(avg_co2);
+            comms_send(cmd);
+
+            // mode_packet 수신 대기 (최대 3초)
+            unsigned long wait_start = millis();
+            while (!comms_mode_available() && millis() - wait_start < 3000);
+
+            if (comms_mode_available()) {
+                mode_packet_t mp = comms_get_last_mode();
+                sdcard_log_decision(ts, mp.mode, mp.fan_cmd, mp.cover_cmd);
+            } else {
+                Serial.println("[COMMS] mode_packet timeout");
+            }
         }
-
-        comms_send(packet);
     }
 }
