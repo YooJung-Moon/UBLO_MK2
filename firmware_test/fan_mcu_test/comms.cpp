@@ -33,3 +33,7 @@ command_packet_t comms_get_last_command() {
 bool comms_command_available() {
     return command_available;
 }
+
+void comms_send(mode_packet_t packet) {
+    esp_now_send(SENSOR_MCU_MAC, (uint8_t *)&packet, sizeof(mode_packet_t));
+}
