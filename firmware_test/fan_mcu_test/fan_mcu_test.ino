@@ -8,6 +8,8 @@
 static uint8_t current_mode = MODE_AUTO;
 static unsigned long mode_entry_time = 0;
 static command_packet_t last_cmd = {0, 0};
+static uint8_t prev_fan_cmd = 255;
+static uint8_t prev_cover_cmd = 255;
 
 void setup() {
     delay(3000);
@@ -24,7 +26,7 @@ void setup() {
 }
 
 void loop() {
-    // 다이얼 입력 감지 (인터럽트 대체)
+    // 다이얼 입력 감지 (Serial 입력으로 대체)
     if (encoder_changed()) {
         current_mode = encoder_get_mode();
         mode_entry_time = millis();
@@ -42,7 +44,7 @@ void loop() {
         Serial.println(last_cmd.cover_cmd);
     }
 
-    // 판단 및 실행
+    // 판단
     mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
 
     // AUTO 복귀 감지
@@ -54,9 +56,15 @@ void loop() {
         Serial.println(current_mode);
     }
 
-    // 액추에이터 실행
-    fan_set(result.fan_cmd);
-    cover_set(result.cover_cmd);
+    // 변경 있을 때만 액추에이터 실행
+    if (result.fan_cmd != prev_fan_cmd) {
+        fan_set(result.fan_cmd);
+        prev_fan_cmd = result.fan_cmd;
+    }
+    if (result.cover_cmd != prev_cover_cmd) {
+        cover_set(result.cover_cmd);
+        prev_cover_cmd = result.cover_cmd;
+    }
 
     // mode_packet 전송
     comms_send(result);
