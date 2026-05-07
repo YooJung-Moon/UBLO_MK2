@@ -56,14 +56,21 @@ void loop() {
         Serial.println(current_mode);
     }
 
-    // 변경 있을 때만 액추에이터 실행
-    if (result.fan_cmd != prev_fan_cmd) {
-        fan_set(result.fan_cmd);
-        prev_fan_cmd = result.fan_cmd;
-    }
+    // 커버 먼저 실행
     if (result.cover_cmd != prev_cover_cmd) {
         cover_set(result.cover_cmd);
         prev_cover_cmd = result.cover_cmd;
+    }
+
+    // 팬은 커버 상태 확인 후 실행
+    if (result.fan_cmd != prev_fan_cmd) {
+        if (result.fan_cmd == 1 && prev_cover_cmd != 1) {
+            // 커버가 아직 안 열렸으면 팬 보류
+            Serial.println("[FAN] Waiting for cover to open...");
+        } else {
+            fan_set(result.fan_cmd);
+            prev_fan_cmd = result.fan_cmd;
+        }
     }
 
     // mode_packet 전송
