@@ -56,20 +56,29 @@ void loop() {
         Serial.println(current_mode);
     }
 
-    // 커버 먼저 실행
-    if (result.cover_cmd != prev_cover_cmd) {
-        cover_set(result.cover_cmd);
-        prev_cover_cmd = result.cover_cmd;
-    }
-
-    // 팬은 커버 상태 확인 후 실행
-    if (result.fan_cmd != prev_fan_cmd) {
-        if (result.fan_cmd == 1 && prev_cover_cmd != 1) {
-            // 커버가 아직 안 열렸으면 팬 보류
-            Serial.println("[FAN] Waiting for cover to open...");
-        } else {
+    // OPEN 방향: 커버 먼저 → 팬
+    // CLOSE 방향: 팬 먼저 → 커버
+    if (result.cover_cmd == 1) {
+        // OPEN 방향
+        if (result.cover_cmd != prev_cover_cmd) {
+            Serial.println("[COVER] Opening...");
+            cover_set(result.cover_cmd);
+            prev_cover_cmd = result.cover_cmd;
+        }
+        if (result.fan_cmd != prev_fan_cmd) {
             fan_set(result.fan_cmd);
             prev_fan_cmd = result.fan_cmd;
+        }
+    } else {
+        // CLOSE 방향
+        if (result.fan_cmd != prev_fan_cmd) {
+            fan_set(result.fan_cmd);
+            prev_fan_cmd = result.fan_cmd;
+        }
+        if (result.cover_cmd != prev_cover_cmd) {
+            Serial.println("[COVER] Closing...");
+            cover_set(result.cover_cmd);
+            prev_cover_cmd = result.cover_cmd;
         }
     }
 
