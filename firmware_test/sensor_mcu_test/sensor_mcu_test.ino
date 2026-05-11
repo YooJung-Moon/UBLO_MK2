@@ -12,7 +12,8 @@ static int sample_count = 0;
 void setup() {
     delay(3000);
     Serial.begin(115200);
-    while (!Serial);
+    unsigned long start = millis();
+    while (!Serial && millis() - start < 3000);  // while (!Serial); 대신
 
     rtc_init();
     sdcard_init();

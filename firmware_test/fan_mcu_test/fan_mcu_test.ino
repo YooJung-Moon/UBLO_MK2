@@ -14,7 +14,8 @@ static uint8_t prev_cover_cmd = 255;
 void setup() {
     delay(3000);
     Serial.begin(115200);
-    while (!Serial);
+    unsigned long start = millis();
+    while (!Serial && millis() - start < 3000);
 
     actuators_init();
     encoder_init();
