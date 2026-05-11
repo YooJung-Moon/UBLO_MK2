@@ -2,7 +2,8 @@
 #include <Arduino.h>
 
 // ESP-NOW
-const uint8_t FAN_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAD, 0xE3, 0x1C};
+const uint8_t FAN_MCU_MAC[] = {0x20, 0x6E, 0xF1, 0x31, 0x2E, 0x64};
+
 
 // CO₂ 임계값 (ppm)
 #define CO2_THRESHOLD   800
