@@ -7,9 +7,9 @@
 
 static uint8_t current_mode = MODE_AUTO;
 static unsigned long mode_entry_time = 0;
-static command_packet_t last_cmd = {0, 0};
+static command_packet_t last_cmd = {0, 1};  // cover_cmd 기본값 OPEN
 static uint8_t prev_fan_cmd = 255;
-static uint8_t prev_cover_cmd = 255;
+static uint8_t prev_cover_cmd = 1;          // 이미 OPEN 상태로 인식
 
 void setup() {
     delay(3000);
@@ -57,10 +57,9 @@ void loop() {
         Serial.println(current_mode);
     }
 
-    // OPEN 방향: 커버 먼저 → 팬
-    // CLOSE 방향: 팬 먼저 → 커버
+    // OPEN 방향: 커버 먼저 → fan
+    // CLOSE 방향: fan 먼저 → 커버
     if (result.cover_cmd == 1) {
-        // OPEN 방향
         if (result.cover_cmd != prev_cover_cmd) {
             Serial.println("[COVER] Opening...");
             cover_set(result.cover_cmd);
@@ -71,7 +70,6 @@ void loop() {
             prev_fan_cmd = result.fan_cmd;
         }
     } else {
-        // CLOSE 방향
         if (result.fan_cmd != prev_fan_cmd) {
             fan_set(result.fan_cmd);
             prev_fan_cmd = result.fan_cmd;
