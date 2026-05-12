@@ -13,7 +13,7 @@ UBLO S MKII는 헬싱키 임대 아파트 공동공간을 위한 스마트 환�
 
 | 모드 | 커버 | Fan |
 |------|------|-----|
-| AUTO | CO₂ 기반 자동 제어 | CO₂ 기반 자동 제어 |
+| AUTO (0) | CO₂ 기반 자동 제어 | CO₂ 기반 자동 제어 |
 | CLOSED (1) | CLOSE | OFF |
 | BREEZE (2) | OPEN | OFF |
 | TURBO (3) | OPEN | ON |
