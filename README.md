@@ -130,7 +130,8 @@ const uint8_t SENSOR_MCU_MAC[] = {0xXX, 0xXX, 0xXX, 0xXX, 0xXX, 0xXX};
 
 **2. 업로드**
 
-`fan_mcu.ino`를 Fan MCU에, `sensor_mcu.ino`를 Sensor MCU에 업로드한다. 초기부터 완전한 로깅 데이터를 확보하기 위해 Fan MCU를 먼저 가동하는 것을 권장한다.
+`fan_mcu.ino`를 Fan MCU에, `sensor_mcu.ino`를 Sensor MCU에 업로드한다.  
+초기부터 완전한 로깅 데이터를 확보하기 위해 Fan MCU를 먼저 가동하는 것을 권장한다.
 
 ---
 
