@@ -29,7 +29,6 @@ UBLO S MKII는 헬싱키 임대 아파트 공동공간을 위한 스마트 환�
 |------|------|
 | Arduino Nano ESP32 × 2 | Sensor MCU, Fan MCU |
 | SCD41 | CO₂, 온도, 습도 센서 |
-| SZH-EK024 | 온도, 습도 센서 |
 | DS3231 | RTC 모듈 |
 | DRV8871 | 모터 드라이버 |
 | Micro SD Socket | SD card 로깅 |
