@@ -5,7 +5,7 @@
 UBLO S MKII는 헬싱키 임대 아파트 공동공간을 위한 스마트 환기 시스템이다.  
 실내 CO₂ 농도를 모니터링하여 환기 커버와 blower fan을 자동으로 제어한다.
 
-<img width="600" alt="ublo_architecture" src="https://github.com/user-attachments/assets/03df1c09-a4c1-433e-ae1b-13b90651ec91" />
+<img width="700" alt="ublo_architecture" src="https://github.com/user-attachments/assets/03df1c09-a4c1-433e-ae1b-13b90651ec91" />
 
 두 개의 Arduino Nano ESP32가 ESP-NOW로 통신하는 듀얼 MCU 구조로 동작한다.
 
