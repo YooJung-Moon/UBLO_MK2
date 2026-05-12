@@ -87,7 +87,10 @@ ublo-mkii/
 
 ---
 
-## 4. 의존성
+## 4. 개발 환경 및 의존성
+
+**개발 환경:**
+- Arduino IDE 2.x
 
 **보드 패키지:**
 - Tools → Boards Manager → **Arduino ESP32 Boards** by Arduino (최신 버전)
