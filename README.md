@@ -88,10 +88,11 @@ ublo-mkii/
 
 ---
 
-## 4. 개발 환경 및 의존성
+**4. 개발 환경 및 의존성**
 
 **개발 환경:**
 - Arduino IDE 2.x
+- Tools → Board → **Arduino Nano ESP32** 선택 (Arduino ESP32 Boards)
 
 **보드 패키지:**
 - Tools → Boards Manager → **Arduino ESP32 Boards** by Arduino (최신 버전)
@@ -99,7 +100,7 @@ ublo-mkii/
 **라이브러리:**
 - `Sensirion I2C SCD4x` — SCD41 CO₂ 센서
 - `Adafruit RTClib` — DS3231 RTC
-
+  
 ---
 
 ## 5. 실행 방법
