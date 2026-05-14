@@ -8,10 +8,8 @@ void rtc_init() {
         Serial.println("RTC init failed");
         return;
     }
-    if (rtc.lostPower()) {
-        Serial.println("RTC lost power, setting time");
-        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    }
+    DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
+    rtc.adjust(DateTime(compileTime.unixtime() + 13));
     Serial.println("RTC initialized");
 }
 
