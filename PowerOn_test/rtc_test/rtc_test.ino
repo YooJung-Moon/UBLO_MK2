@@ -3,7 +3,7 @@
 
 RTC_DS3231 rtc;
 
-#define UPLOAD_OFFSET_SEC 11
+#define UPLOAD_OFFSET_SEC 13
 
 void setup() {
     delay(3000);
