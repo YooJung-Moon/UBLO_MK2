@@ -3,6 +3,8 @@
 
 RTC_DS3231 rtc;
 
+#define UPLOAD_OFFSET_SEC 11
+
 void setup() {
     delay(3000);
     Serial.begin(115200);
@@ -16,11 +18,8 @@ void setup() {
         while (true);
     }
 
-    // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));  // 주석 처리
-
-    // 첫 번째 업로드 이후 경과 시간 보정
-    DateTime now = rtc.now();
-    rtc.adjust(DateTime(now.unixtime() + 11));
+    DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
+    rtc.adjust(DateTime(compileTime.unixtime() + UPLOAD_OFFSET_SEC));
 
     if (rtc.lostPower()) {
         Serial.println("RTC previously lost power!");
