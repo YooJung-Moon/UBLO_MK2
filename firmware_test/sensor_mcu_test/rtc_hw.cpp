@@ -1,6 +1,8 @@
 #include "rtc.h"
 #include <RTClib.h>
 
+#define UPLOAD_OFFSET_SEC 13
+
 static RTC_DS3231 rtc;
 
 void rtc_init() {
@@ -9,7 +11,7 @@ void rtc_init() {
         return;
     }
     DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
-    rtc.adjust(DateTime(compileTime.unixtime() + 13));
+    rtc.adjust(DateTime(compileTime.unixtime() + UPLOAD_OFFSET_SEC));
     Serial.println("RTC initialized");
 }
 

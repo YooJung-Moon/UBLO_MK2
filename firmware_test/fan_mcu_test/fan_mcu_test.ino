@@ -8,8 +8,8 @@
 static uint8_t current_mode = MODE_BREEZE;  // 초기 모드: BREEZE (커버 OPEN, fan OFF)
 static unsigned long mode_entry_time = 0;   // 부팅 시점부터 타임아웃 카운트 시작
 static command_packet_t last_cmd = {0, 1};  // 초기값: fan OFF, cover OPEN
-static uint8_t prev_fan_cmd = 255;          // 255: 초기화 안 된 상태
-static uint8_t prev_cover_cmd = 1;          // 부팅 시 커버가 이미 OPEN 상태임을 인식
+static uint8_t prev_fan_cmd = 0;          // 부팅 시 BREEZE: fan OFF
+static uint8_t prev_cover_cmd = 1;          // 부팅 시 BREEZE: cover OPEN
 
 String mode_name(uint8_t mode) {
     switch (mode) {
@@ -96,6 +96,8 @@ void loop() {
         comms_send(result);
 
         actuate(result);
+        Serial.println("[COMMS] mode_packet sent");
+
     }
 
     // MANUAL 모드 타임아웃 체크
