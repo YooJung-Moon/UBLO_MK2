@@ -1,7 +1,7 @@
 #include "rtc.h"
 #include <RTClib.h>
 
-#define UPLOAD_OFFSET_SEC 13
+#define UPLOAD_OFFSET_SEC 18
 
 static RTC_DS3231 rtc;
 
