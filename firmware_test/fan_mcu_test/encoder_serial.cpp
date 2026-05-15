@@ -1,6 +1,6 @@
 #include "encoder.h"
 
-static uint8_t current_mode = 0;
+static uint8_t current_mode = 2;
 static bool changed = false;
 
 void encoder_init() {
