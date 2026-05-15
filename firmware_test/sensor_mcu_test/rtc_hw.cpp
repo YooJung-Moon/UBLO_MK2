@@ -10,8 +10,23 @@ void rtc_init() {
         Serial.println("RTC init failed");
         return;
     }
-    DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
-    rtc.adjust(DateTime(compileTime.unixtime() + UPLOAD_OFFSET_SEC));
+
+    /*
+     * [1단계] 첫 번째 업로드 시 주석 해제
+     *         시각을 컴파일 시점 + UPLOAD_OFFSET_SEC 으로 강제 설정
+     */
+    // DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
+    // rtc.adjust(DateTime(compileTime.unixtime() + UPLOAD_OFFSET_SEC));
+
+    /*
+     * [2단계] 두 번째 업로드 시 주석 해제
+     *         배터리 방전 시에만 시각 재설정, 리셋/전원 껐다 켜도 시각 유지
+     */
+    if (rtc.lostPower()) {
+        DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
+        rtc.adjust(DateTime(compileTime.unixtime() + UPLOAD_OFFSET_SEC));
+    }
+
     Serial.println("RTC initialized");
 }
 
