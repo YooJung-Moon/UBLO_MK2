@@ -1,5 +1,6 @@
 #include "rtc.h"
 #include <RTClib.h>
+#include <esp_system.h>
 
 #define UPLOAD_OFFSET_SEC 18
 
@@ -11,24 +12,15 @@ void rtc_init() {
         return;
     }
 
-/////////////////////////
-    /*
-     * [1단계] 첫 번째 업로드 시 주석 해제
-     *         시각을 컴파일 시점 + UPLOAD_OFFSET_SEC 으로 강제 설정
-     */
-    // DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
-    // rtc.adjust(DateTime(compileTime.unixtime() + UPLOAD_OFFSET_SEC));
+    esp_reset_reason_t reason = esp_reset_reason();
 
-    /*
-     * [2단계] 두 번째 업로드 시 주석 해제
-     *         배터리 방전 시에만 시각 재설정, 리셋/전원 껐다 켜도 시각 유지
-     */
-    if (rtc.lostPower()) {
+    if (reason == ESP_RST_SW) {
         DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
         rtc.adjust(DateTime(compileTime.unixtime() + UPLOAD_OFFSET_SEC));
+        Serial.println("RTC synced (upload detected)");
+    } else {
+        Serial.println("RTC time kept (reset/power cycle detected)");
     }
-
- //////////////////////////   
 
     Serial.println("RTC initialized");
 }
