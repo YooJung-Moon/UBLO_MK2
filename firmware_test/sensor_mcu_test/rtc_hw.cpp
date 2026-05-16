@@ -11,6 +11,7 @@ void rtc_init() {
         return;
     }
 
+/////////////////////////
     /*
      * [1단계] 첫 번째 업로드 시 주석 해제
      *         시각을 컴파일 시점 + UPLOAD_OFFSET_SEC 으로 강제 설정
@@ -26,6 +27,8 @@ void rtc_init() {
         DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
         rtc.adjust(DateTime(compileTime.unixtime() + UPLOAD_OFFSET_SEC));
     }
+
+ //////////////////////////   
 
     Serial.println("RTC initialized");
 }
