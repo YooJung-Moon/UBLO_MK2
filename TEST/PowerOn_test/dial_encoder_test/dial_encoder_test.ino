@@ -1,99 +1,161 @@
-// Arduino Nano ESP32 + 다이얼 PCB J6 테스트 코드
+// rotary_encoder_led_test.ino
+// Arduino Nano ESP32 + Rotary Encoder + 4 Mode LEDs
 
-const int ENC_A  = D2;  // J6-3
-const int ENC_B  = D3;  // J6-4
-const int ENC_SW = D4;  // J6-5
+#define ENC_A_PIN   D2   // J6-3
+#define ENC_B_PIN   D3   // J6-4
+#define ENC_SW_PIN  D4   // J6-5
 
-const int LED1 = D5;    // J6-6
-const int LED2 = D6;    // J6-7
-const int LED3 = D7;    // J6-8
-const int LED4 = D8;    // J6-9
+// PCB LED 이름 기준
+// LED D2 = mode 0 AUTO
+// LED D3 = mode 1 CLOSED
+// LED D4 = mode 2 BREEZE
+// LED D5 = mode 3 TURBO
+#define LED_AUTO_PIN    D5   // J6-6, PCB LED D2
+#define LED_CLOSED_PIN  D6   // J6-7, PCB LED D3
+#define LED_BREEZE_PIN  D7   // J6-8, PCB LED D4
+#define LED_TURBO_PIN   D8   // J6-9, PCB LED D5
 
-int lastA = HIGH;
-long encoderCount = 0;
+#define MODE_COUNT 4
+
+int currentMode = 0;
+
+const char* modeNames[MODE_COUNT] = {
+  "AUTO",
+  "CLOSED",
+  "BREEZE",
+  "TURBO"
+};
+
+int lastEncoded = 0;
+int encoderStep = 0;
+
+int lastButtonReading = HIGH;
+int stableButtonState = HIGH;
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 40;
+
+void allLedsOff() {
+  // 이 회로는 LOW일 때 LED ON, HIGH일 때 LED OFF
+  digitalWrite(LED_AUTO_PIN, HIGH);
+  digitalWrite(LED_CLOSED_PIN, HIGH);
+  digitalWrite(LED_BREEZE_PIN, HIGH);
+  digitalWrite(LED_TURBO_PIN, HIGH);
+}
+
+void showModeLed(int mode) {
+  allLedsOff();
+
+  if (mode == 0) digitalWrite(LED_AUTO_PIN, LOW);
+  if (mode == 1) digitalWrite(LED_CLOSED_PIN, LOW);
+  if (mode == 2) digitalWrite(LED_BREEZE_PIN, LOW);
+  if (mode == 3) digitalWrite(LED_TURBO_PIN, LOW);
+}
+
+void printModeChange(const char* direction) {
+  Serial.print(direction);
+  Serial.print(" -> mode ");
+  Serial.print(currentMode);
+  Serial.print(" ");
+  Serial.println(modeNames[currentMode]);
+}
+
+void nextMode() {
+  currentMode++;
+
+  if (currentMode >= MODE_COUNT) {
+    currentMode = 0;
+  }
+
+  showModeLed(currentMode);
+  printModeChange("CW");
+}
+
+void previousMode() {
+  currentMode--;
+
+  if (currentMode < 0) {
+    currentMode = MODE_COUNT - 1;
+  }
+
+  showModeLed(currentMode);
+  printModeChange("CCW");
+}
+
+void checkEncoder() {
+  int msb = digitalRead(ENC_A_PIN);
+  int lsb = digitalRead(ENC_B_PIN);
+
+  int encoded = (msb << 1) | lsb;
+  int sum = (lastEncoded << 2) | encoded;
+
+  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
+    encoderStep++;
+  }
+
+  if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
+    encoderStep--;
+  }
+
+  if (encoderStep >= 4) {
+    encoderStep = 0;
+    nextMode();
+  }
+
+  if (encoderStep <= -4) {
+    encoderStep = 0;
+    previousMode();
+  }
+
+  lastEncoded = encoded;
+}
+
+void checkButton() {
+  int reading = digitalRead(ENC_SW_PIN);
+
+  if (reading != lastButtonReading) {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading != stableButtonState) {
+      stableButtonState = reading;
+
+      if (stableButtonState == LOW) {
+        Serial.print("CONFIRMED mode ");
+        Serial.print(currentMode);
+        Serial.print(" ");
+        Serial.println(modeNames[currentMode]);
+      }
+    }
+  }
+
+  lastButtonReading = reading;
+}
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
-  // PCB에 10k 풀업 저항이 있으므로 INPUT 사용
-  pinMode(ENC_A, INPUT);
-  pinMode(ENC_B, INPUT);
-  pinMode(ENC_SW, INPUT);
+  pinMode(ENC_A_PIN, INPUT);
+  pinMode(ENC_B_PIN, INPUT);
+  pinMode(ENC_SW_PIN, INPUT);
 
-  pinMode(LED1, OUTPUT);
-  pinMode(LED2, OUTPUT);
-  pinMode(LED3, OUTPUT);
-  pinMode(LED4, OUTPUT);
+  pinMode(LED_AUTO_PIN, OUTPUT);
+  pinMode(LED_CLOSED_PIN, OUTPUT);
+  pinMode(LED_BREEZE_PIN, OUTPUT);
+  pinMode(LED_TURBO_PIN, OUTPUT);
 
-  // 이 회로는 LED_K가 LOW일 때 LED 켜짐
-  digitalWrite(LED1, HIGH);
-  digitalWrite(LED2, HIGH);
-  digitalWrite(LED3, HIGH);
-  digitalWrite(LED4, HIGH);
+  int msb = digitalRead(ENC_A_PIN);
+  int lsb = digitalRead(ENC_B_PIN);
+  lastEncoded = (msb << 1) | lsb;
 
-  lastA = digitalRead(ENC_A);
+  showModeLed(currentMode);
 
-  Serial.println("Dial PCB test start");
-  Serial.println("Turn encoder / press switch");
+  Serial.println("Rotary mode selector test start");
+  Serial.println("Initial mode 0 AUTO");
 }
 
 void loop() {
-  int a = digitalRead(ENC_A);
-  int b = digitalRead(ENC_B);
-  int sw = digitalRead(ENC_SW);
-
-  // 엔코더 회전 감지
-  if (a != lastA) {
-    if (a == LOW) {
-      if (b == HIGH) {
-        encoderCount++;
-        Serial.print("CW  count = ");
-      } else {
-        encoderCount--;
-        Serial.print("CCW count = ");
-      }
-      Serial.println(encoderCount);
-    }
-    lastA = a;
-  }
-
-  // 버튼 상태 출력
-  static int lastSW = HIGH;
-  if (sw != lastSW) {
-    if (sw == LOW) {
-      Serial.println("Button pressed");
-    } else {
-      Serial.println("Button released");
-    }
-    lastSW = sw;
-  }
-
-  // 버튼 누르면 LED1 켜짐
-  if (sw == LOW) {
-    digitalWrite(LED1, LOW);   // ON
-  } else {
-    digitalWrite(LED1, HIGH);  // OFF
-  }
-
-  // encoderCount 값에 따라 LED2~LED4 테스트
-  if (encoderCount % 2 == 0) {
-    digitalWrite(LED2, LOW);   // ON
-  } else {
-    digitalWrite(LED2, HIGH);  // OFF
-  }
-
-  if (encoderCount % 3 == 0) {
-    digitalWrite(LED3, LOW);
-  } else {
-    digitalWrite(LED3, HIGH);
-  }
-
-  if (encoderCount % 4 == 0) {
-    digitalWrite(LED4, LOW);
-  } else {
-    digitalWrite(LED4, HIGH);
-  }
-
-  delay(2);
+  checkEncoder();
+  checkButton();
 }
