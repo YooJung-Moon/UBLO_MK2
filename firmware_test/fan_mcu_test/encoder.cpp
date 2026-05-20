@@ -1,7 +1,6 @@
 #include "encoder.h"
 #include "config.h"
 
-// 핀 정의
 #define ENC_A_PIN   D4
 #define ENC_B_PIN   D7
 #define ENC_SW_PIN  D8
@@ -13,9 +12,9 @@
 
 #define MODE_COUNT 4
 
-static uint8_t current_mode = MODE_BREEZE;  // 초기 모드: BREEZE
-static uint8_t preview_mode = MODE_BREEZE;  // 회전 시 미리보기 모드
-static bool mode_confirmed = false;         // 버튼 눌림 여부
+static uint8_t current_mode = MODE_BREEZE;
+static uint8_t preview_mode = MODE_BREEZE;
+static bool mode_confirmed = false;
 
 // Quadrature decoding을 위한 이전 encoder 상태 저장
 static int last_encoded = 0;
@@ -139,10 +138,13 @@ void encoder_init() {
     Serial.println("Mode input: 0=AUTO, 1=CLOSED, 2=BREEZE, 3=TURBO");
 }
 
-bool encoder_changed() {
+// loop()에서 항상 호출 — encoder 회전 및 버튼 상태 감지
+void encoder_update() {
     check_encoder();
     check_button();
+}
 
+bool encoder_changed() {
     if (mode_confirmed) {
         mode_confirmed = false;
         return true;
