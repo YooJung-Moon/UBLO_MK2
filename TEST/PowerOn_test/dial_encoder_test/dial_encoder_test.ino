@@ -2,33 +2,27 @@
 // Arduino Nano ESP32 + Rotary Encoder + 4 Mode LEDs
 //
 // 연결 기준:
-// Arduino 3V3  -> J6-1  VCC_3V3
-// Arduino GND  -> J6-2  GND
-// Arduino D2   -> J6-3  ENC_A
-// Arduino D3   -> J6-4  ENC_B
-// Arduino D4   -> J6-5  ENC_SW
-// Arduino D5   -> J6-6  LED1_K, PCB LED D2
-// Arduino D6   -> J6-7  LED2_K, PCB LED D3
-// Arduino D7   -> J6-8  LED3_K, PCB LED D4
-// Arduino D8   -> J6-9  LED4_K, PCB LED D5
+// Arduino D4  -> ENC_A
+// Arduino D7  -> ENC_B
+// Arduino D8  -> ENC_SW
+// Arduino A0  -> LED1_K, PCB LED D2 (AUTO)
+// Arduino A1  -> LED2_K, PCB LED D3 (CLOSED)
+// Arduino A2  -> LED3_K, PCB LED D4 (BREEZE)
+// Arduino A3  -> LED4_K, PCB LED D5 (TURBO)
 
-#define ENC_A_PIN   D2
-#define ENC_B_PIN   D3
-#define ENC_SW_PIN  D4
+#define ENC_A_PIN   D4
+#define ENC_B_PIN   D7
+#define ENC_SW_PIN  D8
 
-// PCB LED 기준:
-// LED D2 = mode 0 AUTO
-// LED D3 = mode 1 CLOSED
-// LED D4 = mode 2 BREEZE
-// LED D5 = mode 3 TURBO
-#define LED_AUTO_PIN    D5
-#define LED_CLOSED_PIN  D6
-#define LED_BREEZE_PIN  D7
-#define LED_TURBO_PIN   D8
+#define LED_AUTO_PIN    A0  // PCB LED D2
+#define LED_CLOSED_PIN  A1  // PCB LED D3
+#define LED_BREEZE_PIN  A2  // PCB LED D4
+#define LED_TURBO_PIN   A3  // PCB LED D5
 
 #define MODE_COUNT 4
 
 int currentMode = 0;
+int previewMode = 0;  // 회전 시 미리보기 모드 (버튼 누르기 전까지 currentMode에 반영 안 됨)
 
 const char* modeNames[MODE_COUNT] = {
   "AUTO",
@@ -37,25 +31,28 @@ const char* modeNames[MODE_COUNT] = {
   "TURBO"
 };
 
+// Quadrature decoding을 위한 이전 encoder 상태 저장
 int lastEncoded = 0;
+// encoder 펄스 누적 카운터 (한 칸 이동 시 A, B 신호가 4번 변화)
 int encoderStep = 0;
 
+// 버튼 디바운싱을 위한 변수
 int lastButtonReading = HIGH;
 int stableButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
-const unsigned long debounceDelay = 40;
+const unsigned long debounceDelay = 40;  // 40ms 이내 신호 변화는 노이즈로 처리
 
-// 이 회로는 LED_K가 LOW일 때 LED ON, HIGH일 때 LED OFF
+// LED는 캐소드(-) 연결이라 LOW일 때 ON, HIGH일 때 OFF
 void allLedsOff() {
-  digitalWrite(LED_AUTO_PIN, HIGH);
-  digitalWrite(LED_CLOSED_PIN, HIGH);
-  digitalWrite(LED_BREEZE_PIN, HIGH);
-  digitalWrite(LED_TURBO_PIN, HIGH);
+  digitalWrite(LED_AUTO_PIN, HIGH);    // PCB LED D2
+  digitalWrite(LED_CLOSED_PIN, HIGH);  // PCB LED D3
+  digitalWrite(LED_BREEZE_PIN, HIGH);  // PCB LED D4
+  digitalWrite(LED_TURBO_PIN, HIGH);   // PCB LED D5
 }
 
+// 해당 모드 LED만 켜고 나머지는 끔
 void showModeLed(int mode) {
   allLedsOff();
-
   if (mode == 0) {
     digitalWrite(LED_AUTO_PIN, LOW);      // PCB LED D2
   } else if (mode == 1) {
@@ -82,12 +79,12 @@ void printStartupMessage() {
   Serial.println("Baud rate: 115200");
   Serial.println("--------------------------------");
   Serial.println("Mode table:");
-  Serial.println("0 = AUTO    -> PCB LED D2");
-  Serial.println("1 = CLOSED  -> PCB LED D3");
-  Serial.println("2 = BREEZE  -> PCB LED D4");
-  Serial.println("3 = TURBO   -> PCB LED D5");
+  Serial.println("0 = AUTO    -> PCB LED D2 (A0)");
+  Serial.println("1 = CLOSED  -> PCB LED D3 (A1)");
+  Serial.println("2 = BREEZE  -> PCB LED D4 (A2)");
+  Serial.println("3 = TURBO   -> PCB LED D5 (A3)");
   Serial.println("--------------------------------");
-  Serial.println("Rotate dial: change mode");
+  Serial.println("Rotate dial: preview mode");
   Serial.println("Press dial : confirm selected mode");
   Serial.println("Mode wraps around: 3 -> 0, 0 -> 3");
   Serial.println("================================");
@@ -96,56 +93,44 @@ void printStartupMessage() {
 
 void printModeChange(const char* direction) {
   Serial.print(direction);
-  Serial.print(" -> mode ");
-  Serial.print(currentMode);
+  Serial.print(" -> preview mode ");
+  Serial.print(previewMode);
   Serial.print(" ");
-  Serial.println(modeNames[currentMode]);
+  Serial.println(modeNames[previewMode]);
 }
 
+// CW 회전: previewMode만 증가, LED 미리보기
 void nextMode() {
-  currentMode++;
-
-  if (currentMode >= MODE_COUNT) {
-    currentMode = 0;
-  }
-
-  showModeLed(currentMode);
+  previewMode++;
+  if (previewMode >= MODE_COUNT) previewMode = 0;
+  showModeLed(previewMode);
   printModeChange("CW");
 }
 
+// CCW 회전: previewMode만 감소, LED 미리보기
 void previousMode() {
-  currentMode--;
-
-  if (currentMode < 0) {
-    currentMode = MODE_COUNT - 1;
-  }
-
-  showModeLed(currentMode);
+  previewMode--;
+  if (previewMode < 0) previewMode = MODE_COUNT - 1;
+  showModeLed(previewMode);
   printModeChange("CCW");
 }
 
 void checkEncoder() {
   int msb = digitalRead(ENC_A_PIN);
   int lsb = digitalRead(ENC_B_PIN);
-
   int encoded = (msb << 1) | lsb;
+
+  // 이전 상태와 현재 상태를 조합해서 회전 방향 판별 (Quadrature decoding)
   int sum = (lastEncoded << 2) | encoded;
 
-  // Quadrature decoding
-  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
-    encoderStep++;
-  }
+  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) encoderStep++;
+  if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) encoderStep--;
 
-  if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
-    encoderStep--;
-  }
-
-  // 일반적인 로터리 엔코더는 한 칸 이동에 4 step 정도 발생
+  // A, B 신호가 4번 변화해야 1칸 이동으로 인식
   if (encoderStep >= 4) {
     encoderStep = 0;
     nextMode();
   }
-
   if (encoderStep <= -4) {
     encoderStep = 0;
     previousMode();
@@ -157,16 +142,17 @@ void checkEncoder() {
 void checkButton() {
   int reading = digitalRead(ENC_SW_PIN);
 
-  if (reading != lastButtonReading) {
-    lastDebounceTime = millis();
-  }
+  // 신호 변화 감지 시 디바운스 타이머 리셋
+  if (reading != lastButtonReading) lastDebounceTime = millis();
 
   if ((millis() - lastDebounceTime) > debounceDelay) {
     if (reading != stableButtonState) {
       stableButtonState = reading;
 
-      // 버튼은 눌렀을 때 LOW
+      // 버튼 눌림(LOW) 확정 시 previewMode를 currentMode로 반영
       if (stableButtonState == LOW) {
+        currentMode = previewMode;
+        showModeLed(currentMode);
         Serial.print("CONFIRMED mode ");
         Serial.print(currentMode);
         Serial.print(" ");
@@ -174,14 +160,11 @@ void checkButton() {
       }
     }
   }
-
   lastButtonReading = reading;
 }
 
 void setup() {
   Serial.begin(115200);
-
-  // USB Serial 안정화 대기
   delay(3000);
 
   pinMode(ENC_A_PIN, INPUT);
@@ -193,12 +176,12 @@ void setup() {
   pinMode(LED_BREEZE_PIN, OUTPUT);
   pinMode(LED_TURBO_PIN, OUTPUT);
 
+  // 초기 encoder 상태 저장
   int msb = digitalRead(ENC_A_PIN);
   int lsb = digitalRead(ENC_B_PIN);
   lastEncoded = (msb << 1) | lsb;
 
   showModeLed(currentMode);
-
   printStartupMessage();
 }
 
