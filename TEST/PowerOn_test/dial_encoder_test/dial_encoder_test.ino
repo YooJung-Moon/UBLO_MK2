@@ -37,11 +37,9 @@ const char* modeNames[MODE_COUNT] = {
   "TURBO"
 };
 
-// Rotary encoder variables
 int lastEncoded = 0;
 int encoderStep = 0;
 
-// Button debounce variables
 int lastButtonReading = HIGH;
 int stableButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
@@ -74,6 +72,26 @@ void printCurrentMode() {
   Serial.print(currentMode);
   Serial.print(" ");
   Serial.println(modeNames[currentMode]);
+}
+
+void printStartupMessage() {
+  Serial.println();
+  Serial.println("================================");
+  Serial.println("Rotary Mode Selector Test Start");
+  Serial.println("Board: Arduino Nano ESP32");
+  Serial.println("Baud rate: 115200");
+  Serial.println("--------------------------------");
+  Serial.println("Mode table:");
+  Serial.println("0 = AUTO    -> PCB LED D2");
+  Serial.println("1 = CLOSED  -> PCB LED D3");
+  Serial.println("2 = BREEZE  -> PCB LED D4");
+  Serial.println("3 = TURBO   -> PCB LED D5");
+  Serial.println("--------------------------------");
+  Serial.println("Rotate dial: change mode");
+  Serial.println("Press dial : confirm selected mode");
+  Serial.println("Mode wraps around: 3 -> 0, 0 -> 3");
+  Serial.println("================================");
+  printCurrentMode();
 }
 
 void printModeChange(const char* direction) {
@@ -162,9 +180,10 @@ void checkButton() {
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
 
-  // PCB에 10k 풀업 저항이 있으므로 INPUT 사용
+  // USB Serial 안정화 대기
+  delay(3000);
+
   pinMode(ENC_A_PIN, INPUT);
   pinMode(ENC_B_PIN, INPUT);
   pinMode(ENC_SW_PIN, INPUT);
@@ -180,23 +199,7 @@ void setup() {
 
   showModeLed(currentMode);
 
-  Serial.println("================================");
-  Serial.println("Rotary Mode Selector Test Start");
-  Serial.println("Board: Arduino Nano ESP32");
-  Serial.println("Baud rate: 115200");
-  Serial.println("--------------------------------");
-  Serial.println("Mode table:");
-  Serial.println("0 = AUTO    -> PCB LED D2");
-  Serial.println("1 = CLOSED  -> PCB LED D3");
-  Serial.println("2 = BREEZE  -> PCB LED D4");
-  Serial.println("3 = TURBO   -> PCB LED D5");
-  Serial.println("--------------------------------");
-  Serial.println("Rotate dial: change mode");
-  Serial.println("Press dial : confirm selected mode");
-  Serial.println("Mode wraps around: 3 -> 0, 0 -> 3");
-  Serial.println("================================");
-
-  printCurrentMode();
+  printStartupMessage();
 }
 
 void loop() {
