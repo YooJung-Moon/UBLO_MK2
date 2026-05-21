@@ -72,17 +72,15 @@ ublo-mkii/
     │   ├── rtc_hw.cpp          // DS3231 구현체
     │   ├── sdcard.h            // SD card 인터페이스
     │   ├── sdcard_hw.cpp       // SD card 구현체
-    │   └── comms.h/cpp         // ESP-NOW 송수신
+    │   ├── comms.h/cpp         // ESP-NOW 송수신
+    │   └── led.h/cpp           // SK6812 CO₂ 농도 표시 LED
     │
     └── fan_mcu/
         ├── fan_mcu.ino         // 진입점
         ├── config.h            // 설정값
         ├── actuators.h/cpp     // Fan PWM, 커버 모터, limit switch
         ├── logic.h/cpp         // MANUAL 판단 로직, 타임아웃
-        ├── encoder.h           // 다이얼 인터페이스
-        ├── encoder_hw.cpp      // Rotary encoder 구현체
-        ├── led.h               // LED 인터페이스
-        ├── led_hw.cpp          // 외부 LED 구현체
+        ├── encoder.h/cpp       // Rotary encoder + 모드 표시 LED 통합
         └── comms.h/cpp         // ESP-NOW 송수신
 ```
 
