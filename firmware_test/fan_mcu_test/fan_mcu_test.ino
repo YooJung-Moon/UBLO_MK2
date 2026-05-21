@@ -63,7 +63,9 @@ void setup() {
 }
 
 void loop() {
-    // 다이얼 입력 감지
+    // encoder 회전 및 버튼 상태 항상 감지
+    encoder_update();
+
     // 버튼 눌림 시 mode_confirmed → current_mode 갱신
     if (encoder_changed()) {
         current_mode = encoder_get_mode();
@@ -111,6 +113,4 @@ void loop() {
         Serial.print("[LOGIC] Auto revert to mode: ");
         Serial.println(mode_name(current_mode));
     }
-
-    delay(100);
 }

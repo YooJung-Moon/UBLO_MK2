@@ -2,9 +2,9 @@
 // Arduino Nano ESP32 + Rotary Encoder + 4 Mode LEDs
 //
 // 연결 기준:
-// Arduino D4  -> ENC_A
+// Arduino D8  -> ENC_A
 // Arduino D7  -> ENC_B
-// Arduino D8  -> ENC_SW
+// Arduino D10  -> ENC_SW
 // Arduino A0  -> LED1_K, PCB LED D2 (AUTO)
 // Arduino A1  -> LED2_K, PCB LED D3 (CLOSED)
 // Arduino A2  -> LED3_K, PCB LED D4 (BREEZE)
@@ -186,6 +186,10 @@ void setup() {
 }
 
 void loop() {
+  int msb = digitalRead(ENC_A_PIN);
+  int lsb = digitalRead(ENC_B_PIN);
+  Serial.print("A: "); Serial.print(msb);
+  Serial.print(" B: "); Serial.println(lsb);
   checkEncoder();
   checkButton();
 }

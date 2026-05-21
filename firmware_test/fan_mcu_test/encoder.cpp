@@ -1,15 +1,6 @@
 #include "encoder.h"
 #include "config.h"
 
-#define ENC_A_PIN   D8
-#define ENC_B_PIN   D7
-#define ENC_SW_PIN  D10
-
-#define LED_AUTO_PIN    A0  // PCB LED D2
-#define LED_CLOSED_PIN  A1  // PCB LED D3
-#define LED_BREEZE_PIN  A2  // PCB LED D4
-#define LED_TURBO_PIN   A3  // PCB LED D5
-
 #define MODE_COUNT 4
 
 static uint8_t current_mode = MODE_BREEZE;
