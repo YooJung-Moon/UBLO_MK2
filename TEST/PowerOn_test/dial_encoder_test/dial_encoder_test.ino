@@ -10,9 +10,9 @@
 // Arduino A2  -> LED3_K, PCB LED D4 (BREEZE)
 // Arduino A3  -> LED4_K, PCB LED D5 (TURBO)
 
-#define ENC_A_PIN   D4
+#define ENC_A_PIN   D8
 #define ENC_B_PIN   D7
-#define ENC_SW_PIN  D8
+#define ENC_SW_PIN  D10
 
 #define LED_AUTO_PIN    A0  // PCB LED D2
 #define LED_CLOSED_PIN  A1  // PCB LED D3
