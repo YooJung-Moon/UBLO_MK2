@@ -2,10 +2,20 @@
 #include "config.h"
 
 #define MODE_COUNT 4
+#define PREVIEW_TIMEOUT    10000  // 10초 후 current_mode로 복귀
+#define PREVIEW_BLINK_MS   500    // preview 깜빡임 간격 (ms)
+#define CONFIRM_BLINK_MS   100    // 확정 시 깜빡임 간격 (ms)
+#define CONFIRM_BLINK_COUNT 3     // 확정 시 깜빡임 횟수
 
 static uint8_t current_mode = MODE_BREEZE;
 static uint8_t preview_mode = MODE_BREEZE;
 static bool mode_confirmed = false;
+static bool in_preview = false;           // preview 상태 여부
+static unsigned long last_rotate_time = 0; // 마지막 회전 시점
+
+// preview 깜빡임 상태
+static bool blink_state = false;
+static unsigned long last_blink_time = 0;
 
 // Quadrature decoding을 위한 이전 encoder 상태 저장
 static int last_encoded = 0;
@@ -33,8 +43,7 @@ static void all_leds_off() {
     digitalWrite(LED_TURBO_PIN, HIGH);   // PCB LED D5
 }
 
-// 해당 모드 LED만 켜고 나머지는 끔
-static void show_mode_led(uint8_t mode) {
+static void led_on(uint8_t mode) {
     all_leds_off();
     if (mode == MODE_AUTO)   digitalWrite(LED_AUTO_PIN, LOW);    // PCB LED D2
     if (mode == MODE_CLOSED) digitalWrite(LED_CLOSED_PIN, LOW);  // PCB LED D3
@@ -42,11 +51,30 @@ static void show_mode_led(uint8_t mode) {
     if (mode == MODE_TURBO)  digitalWrite(LED_TURBO_PIN, LOW);   // PCB LED D5
 }
 
+// 해당 모드 LED만 켜고 나머지는 끔
+static void show_mode_led(uint8_t mode) {
+    led_on(mode);
+}
+
+// 확정 시 빠르게 3번 깜빡인 후 고정
+static void confirm_blink(uint8_t mode) {
+    for (int i = 0; i < CONFIRM_BLINK_COUNT; i++) {
+        all_leds_off();
+        delay(CONFIRM_BLINK_MS);
+        led_on(mode);
+        delay(CONFIRM_BLINK_MS);
+    }
+}
+
 // CW 회전: preview_mode만 증가, LED 미리보기
 static void next_mode() {
     preview_mode++;
     if (preview_mode >= MODE_COUNT) preview_mode = 0;
-    show_mode_led(preview_mode);
+    in_preview = (preview_mode != current_mode);
+    last_rotate_time = millis();
+    blink_state = true;
+    last_blink_time = millis();
+    led_on(preview_mode);
     Serial.print("CW -> preview mode ");
     Serial.print(preview_mode);
     Serial.print(" ");
@@ -56,7 +84,11 @@ static void next_mode() {
 // CCW 회전: preview_mode만 감소, LED 미리보기
 static void prev_mode() {
     preview_mode = (preview_mode == 0) ? MODE_COUNT - 1 : preview_mode - 1;
-    show_mode_led(preview_mode);
+    in_preview = (preview_mode != current_mode);
+    last_rotate_time = millis();
+    blink_state = true;
+    last_blink_time = millis();
+    led_on(preview_mode);
     Serial.print("CCW -> preview mode ");
     Serial.print(preview_mode);
     Serial.print(" ");
@@ -100,7 +132,8 @@ static void check_button() {
             // 버튼 눌림(LOW) 확정 시 preview_mode를 current_mode로 반영
             if (stable_button_state == LOW) {
                 current_mode = preview_mode;
-                show_mode_led(current_mode);
+                in_preview = false;
+                confirm_blink(current_mode);  // 빠르게 3번 깜빡인 후 고정
                 mode_confirmed = true;
                 Serial.print("[ENCODER] Mode changed to: ");
                 Serial.println(mode_names[current_mode]);
@@ -108,6 +141,31 @@ static void check_button() {
         }
     }
     last_button_reading = reading;
+}
+
+// preview 깜빡임 및 타임아웃 처리
+static void update_preview() {
+    if (!in_preview) return;
+
+    // 30초 타임아웃 → current_mode로 복귀
+    if (millis() - last_rotate_time >= PREVIEW_TIMEOUT) {
+        preview_mode = current_mode;
+        in_preview = false;
+        show_mode_led(current_mode);
+        Serial.println("[ENCODER] Preview timeout → current mode");
+        return;
+    }
+
+    // 500ms 간격으로 preview_mode LED 깜빡임
+    if (millis() - last_blink_time >= PREVIEW_BLINK_MS) {
+        last_blink_time = millis();
+        blink_state = !blink_state;
+        if (blink_state) {
+            led_on(preview_mode);
+        } else {
+            all_leds_off();
+        }
+    }
 }
 
 void encoder_init() {
@@ -133,6 +191,7 @@ void encoder_init() {
 void encoder_update() {
     check_encoder();
     check_button();
+    update_preview();
 }
 
 bool encoder_changed() {
@@ -151,5 +210,6 @@ uint8_t encoder_get_mode() {
 void encoder_set_mode(uint8_t mode) {
     current_mode = mode;
     preview_mode = mode;
+    in_preview = false;
     show_mode_led(current_mode);
 }
