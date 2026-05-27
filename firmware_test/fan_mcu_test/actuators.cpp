@@ -2,14 +2,16 @@
 #include "config.h"
 
 void actuators_init() {
-    pinMode(MOTOR_IN1, OUTPUT);
-    pinMode(MOTOR_IN2, OUTPUT);
-    pinMode(LIM_OPEN,  INPUT_PULLUP);
-    pinMode(LIM_CLOSE, INPUT_PULLUP);
-    pinMode(FAN_PWM,   OUTPUT);
+    pinMode(MOTOR_IN1,  OUTPUT);
+    pinMode(MOTOR_IN2,  OUTPUT);
+    pinMode(LIM_OPEN,   INPUT_PULLUP);
+    pinMode(LIM_CLOSE,  INPUT_PULLUP);
+    pinMode(FAN_PWM,    OUTPUT);
+    pinMode(BLOWER_EN,  OUTPUT);  // Blower EN 핀 초기화
 
     // 초기 상태: fan OFF, 모터 정지
-    analogWrite(FAN_PWM, 0);
+    analogWrite(FAN_PWM, 255);     // active low: 255 = fan OFF
+    digitalWrite(BLOWER_EN, LOW);  // Blower EN 비활성화
     digitalWrite(MOTOR_IN1, LOW);
     digitalWrite(MOTOR_IN2, LOW);
 
@@ -18,10 +20,12 @@ void actuators_init() {
 
 void fan_set(uint8_t cmd) {
     if (cmd == 1) {
-        analogWrite(FAN_PWM, 255);
+        digitalWrite(BLOWER_EN, HIGH);  // Blower EN 활성화
+        analogWrite(FAN_PWM, 0);        // active low: 0 = fan ON
         Serial.println("Fan ON");
     } else {
-        analogWrite(FAN_PWM, 0);
+        analogWrite(FAN_PWM, 255);      // active low: 255 = fan OFF
+        digitalWrite(BLOWER_EN, LOW);   // Blower EN 비활성화
         Serial.println("Fan OFF");
     }
 }

@@ -5,15 +5,16 @@
 const uint8_t SENSOR_MCU_MAC[] = {0x20, 0x6E, 0xF1, 0x31, 0x32, 0xDC};
 
 // 핀 정의 — 액추에이터
-#define MOTOR_IN1   D3
-#define MOTOR_IN2   D2
-#define LIM_OPEN    D6
+#define MOTOR_IN1   D2
+#define MOTOR_IN2   D3
+#define BLOWER_EN   D4
 #define LIM_CLOSE   D5
-#define FAN_PWM     D9
+#define LIM_OPEN    D6
+#define FAN_PWM     D7
 
 // 핀 정의 — Encoder
 #define ENC_A_PIN   D8
-#define ENC_B_PIN   D7
+#define ENC_B_PIN   D9
 #define ENC_SW_PIN  D10
 
 // 핀 정의 — LED

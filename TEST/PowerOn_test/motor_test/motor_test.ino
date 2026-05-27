@@ -1,5 +1,5 @@
-#define IN1 2
-#define IN2 3
+#define IN1 3
+#define IN2 2
 
 void setup() {
   pinMode(IN1, OUTPUT);
