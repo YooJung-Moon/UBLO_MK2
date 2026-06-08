@@ -4,7 +4,10 @@
 #define LED_PIN    D2
 #define LED_COUNT  1
 
+// 아래 세 줄 중 하나씩 주석 해제해서 테스트
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+// Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
+// Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
 
 void setup() {
     Serial.begin(115200);
