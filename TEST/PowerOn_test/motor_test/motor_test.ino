@@ -1,5 +1,20 @@
-#define IN1 3
-#define IN2 2
+#define IN1 D3
+#define IN2 D2
+
+void motorForward() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+}
+
+void motorReverse() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+}
+
+void motorStop() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+}
 
 void setup() {
   pinMode(IN1, OUTPUT);
@@ -7,18 +22,15 @@ void setup() {
 }
 
 void loop() {
-  // 한 방향
-  digitalWrite(IN1, HIGH);
-  digitalWrite(IN2, LOW);
-  delay(2000);
+  motorForward();
+  delay(10000);
 
-  // 반대 방향
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, HIGH);
-  delay(2000);
+  motorStop();
+  delay(1000);   // 정지 시간 — 필요에 따라 조정
 
-  // 정지
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, LOW);
-  delay(2000);
+  motorReverse();
+  delay(10000);
+
+  motorStop();
+  delay(1000);
 }
