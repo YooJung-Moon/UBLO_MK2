@@ -7,7 +7,7 @@
 #define CO2_GREEN   600  // 600 이하 → 초록
 #define CO2_YELLOW  800  // 600~800 → 노랑, 800 이상 → 빨강
 
-static Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+static Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
 
 void led_init() {
     strip.begin();
