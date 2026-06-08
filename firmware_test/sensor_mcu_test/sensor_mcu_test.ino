@@ -5,6 +5,7 @@
 #include "logic.h"
 #include "sdcard.h"
 #include "comms.h"
+#include "led.h"
 
 static unsigned long last_sensor_time = 0;
 static int sample_count = 0;
@@ -13,11 +14,12 @@ void setup() {
     delay(3000);
     Serial.begin(115200);
     unsigned long start = millis();
-    while (!Serial && millis() - start < 3000);  // while (!Serial); 대신
+    while (!Serial && millis() - start < 3000);
 
     rtc_init();
     sdcard_init();
     comms_init();
+    led_init();
 
     if (!sensors_init()) {
         Serial.println("Sensor init failed, halting");
@@ -46,6 +48,7 @@ void loop() {
         String ts = rtc_timestamp();
         sdcard_log_raw(ts, co2, temp, humidity);
         buffer_add(co2);
+        led_set_co2(co2);  // CO₂ 농도에 따라 LED 색상 업데이트
         sample_count++;
 
         // 10분 주기: 60개 측정값 누적 시 판단
