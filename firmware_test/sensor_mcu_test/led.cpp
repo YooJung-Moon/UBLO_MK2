@@ -1,7 +1,7 @@
 #include "led.h"
 #include <Adafruit_NeoPixel.h>
 
-#define LED_PIN     D2
+#define LED_PIN     5
 #define LED_COUNT   1
 
 #define CO2_GREEN   600  // 600 이하 → 초록
