@@ -2,11 +2,11 @@
 #include <Arduino.h>
 
 // ESP-NOW
-const uint8_t SENSOR_MCU_MAC[] = {0x20, 0x6E, 0xF1, 0x31, 0x32, 0xDC};
+const uint8_t SENSOR_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAE, 0x68, 0x7C};
 
 // 핀 정의 — 액추에이터
-#define MOTOR_IN1   D3
-#define MOTOR_IN2   D2
+#define MOTOR_IN1   D2
+#define MOTOR_IN2   D3
 #define BLOWER_EN   D4
 #define LIM_CLOSE   D5
 #define LIM_OPEN    D6
