@@ -7,7 +7,7 @@ const uint8_t FAN_MCU_MAC[] = {0x20, 0x6E, 0xF1, 0x31, 0x2D, 0x84};
 
 
 // CO₂ 임계값 (ppm)
-#define CO2_THRESHOLD   800
+#define CO2_THRESHOLD   1000
 #define CO2_DANGER      2000
 
 // 버퍼

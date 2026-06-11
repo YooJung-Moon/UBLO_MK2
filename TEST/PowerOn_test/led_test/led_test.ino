@@ -9,6 +9,7 @@
 // Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
 
+
 void setup() {
     Serial.begin(115200);
     delay(3000);
@@ -22,25 +23,20 @@ void setup() {
 void loop() {
     // 빨강
     Serial.println("RED");
-    strip.setPixelColor(0, strip.Color(255, 0, 0));
+    strip.setPixelColor(0, strip.Color(100, 0, 0));
     strip.show();
     delay(1000);
 
     // 초록
     Serial.println("GREEN");
-    strip.setPixelColor(0, strip.Color(0, 255, 0));
+    strip.setPixelColor(0, strip.Color(0, 100, 0));
     strip.show();
     delay(1000);
 
-    // 파랑
-    Serial.println("BLUE");
-    strip.setPixelColor(0, strip.Color(0, 0, 255));
-    strip.show();
-    delay(1000);
 
     // 노랑
     Serial.println("YELLOW");
-    strip.setPixelColor(0, strip.Color(255, 165, 0));
+    strip.setPixelColor(0, strip.Color(50, 60, 0));
     strip.show();
     delay(1000);
 
