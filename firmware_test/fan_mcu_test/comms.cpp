@@ -5,6 +5,7 @@ static command_packet_t last_command;
 static volatile bool command_available = false;
 
 void on_data_recv(const uint8_t *mac, const uint8_t *data, int len) {
+    if (memcmp(mac, SENSOR_MCU_MAC, 6) != 0) return;  // 
     if (len == sizeof(command_packet_t)) {
         memcpy(&last_command, data, sizeof(command_packet_t));
         command_available = true;

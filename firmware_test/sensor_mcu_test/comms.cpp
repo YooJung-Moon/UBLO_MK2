@@ -5,6 +5,7 @@ static mode_packet_t last_mode;
 static volatile bool mode_available = false;
 
 void on_data_recv(const uint8_t *mac, const uint8_t *data, int len) {
+    if (memcmp(mac, FAN_MCU_MAC, 6) != 0) return;  // 
     if (len == sizeof(mode_packet_t)) {
         memcpy(&last_mode, data, sizeof(mode_packet_t));
         mode_available = true;
