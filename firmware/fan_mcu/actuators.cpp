@@ -12,7 +12,7 @@ void actuators_init() {
     pinMode(BLOWER_EN,  OUTPUT);
 
     // 초기 상태: fan OFF, 모터 정지
-    analogWrite(FAN_PWM, 255);     // active low: 255 = fan OFF
+    digitalWrite(FAN_PWM, HIGH);   // active low: HIGH = fan OFF
     digitalWrite(BLOWER_EN, LOW);
     digitalWrite(MOTOR_IN1, LOW);
     digitalWrite(MOTOR_IN2, LOW);
@@ -23,10 +23,10 @@ void actuators_init() {
 void fan_set(uint8_t cmd) {
     if (cmd == 1) {
         digitalWrite(BLOWER_EN, HIGH);
-        analogWrite(FAN_PWM, 0);        // active low: 0 = fan ON
+        digitalWrite(FAN_PWM, LOW);   // active low: LOW = fan ON
         Serial.println("Fan ON");
     } else {
-        analogWrite(FAN_PWM, 255);      // active low: 255 = fan OFF
+        digitalWrite(FAN_PWM, HIGH);  // active low: HIGH = fan OFF
         digitalWrite(BLOWER_EN, LOW);
         Serial.println("Fan OFF");
     }
