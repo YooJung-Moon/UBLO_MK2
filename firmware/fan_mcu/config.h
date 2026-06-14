@@ -21,17 +21,17 @@ const uint8_t SENSOR_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAE, 0x68, 0x7C}; // pair 1
 
 // 핀 정의 — LED
 #define LED_AUTO_PIN    A0  // PCB LED D2
-#define LED_CLOSED_PIN  A1  // PCB LED D3
-#define LED_BREEZE_PIN  A2  // PCB LED D4
+#define LED_CLOSE_PIN   A1  // PCB LED D3
+#define LED_OPEN_PIN    A2  // PCB LED D4
 #define LED_TURBO_PIN   A3  // PCB LED D5
 
 // 타임아웃 (ms)
-#define TIMEOUT_CLOSED  0         // 타임아웃 없음
-#define TIMEOUT_BREEZE  14400000  // 4시간
+#define TIMEOUT_CLOSE   0         // 타임아웃 없음
+#define TIMEOUT_OPEN    14400000  // 4시간
 #define TIMEOUT_TURBO   3600000   // 1시간
 
 // 모드 정의
 #define MODE_AUTO    0
-#define MODE_CLOSED  1
-#define MODE_BREEZE  2
+#define MODE_CLOSE   1
+#define MODE_OPEN    2
 #define MODE_TURBO   3
