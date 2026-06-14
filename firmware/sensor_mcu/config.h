@@ -1,15 +1,19 @@
 #pragma once
+#include <Arduino.h>
 
 // ESP-NOW
-uint8_t FAN_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAD, 0xE3, 0x1C};
+const uint8_t FAN_MCU_MAC[] = {0x20, 0x6E, 0xF1, 0x31, 0x2D, 0x84}; // pair 1_UBLO
+// const uint8_t FAN_MCU_MAC[] = {0x20, 0x6E, 0xF1, 0x31, 0x2E, 0x24};  // pair 2
+// const uint8_t FAN_MCU_MAC[] = {0x20, 0x6E, 0xF1, 0x31, 0x2D, 0x34}; // pair 3 
+
 
 // CO₂ 임계값 (ppm)
-#define CO2_GOOD        800
+#define CO2_THRESHOLD   1000
 #define CO2_DANGER      2000
 
-// 타임아웃 (초)
-#define TIMEOUT_BREEZE  14400   // 4시간
-#define TIMEOUT_TURBO   3600    // 1시간
+// 버퍼
+#define BUFFER_SIZE     3   // 테스트용: 3개 (30초)    
+                            // 10초 × 60 = 10분
 
 // 센서 수집 주기 (ms)
 #define SENSOR_INTERVAL 10000
