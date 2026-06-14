@@ -17,8 +17,8 @@ UBLO S MKII는 헬싱키 임대 아파트 공동공간을 위한 스마트 환�
 | 모드 | 커버 | Fan |
 |------|------|-----|
 | AUTO (0) | CO₂ 기반 자동 제어 | CO₂ 기반 자동 제어 |
-| CLOSED (1) | CLOSE | OFF |
-| BREEZE (2) | OPEN | OFF |
+| CLOSE (1) | CLOSE | OFF |
+| OPEN (2) | OPEN | OFF |
 | TURBO (3) | OPEN | ON |
 
 ---
@@ -60,28 +60,37 @@ UBLO S MKII는 헬싱키 임대 아파트 공동공간을 위한 스마트 환�
 ## 3. 디렉토리 구조
 
 ```
-ublo-mkii/
-└── firmware/
-    ├── sensor_mcu/
-    │   ├── sensor_mcu.ino      // 진입점
-    │   ├── config.h            // 설정값
-    │   ├── sensors.h/cpp       // SCD41 읽기
-    │   ├── buffer.h/cpp        // 측정값 버퍼 및 평균 연산
-    │   ├── logic.h/cpp         // AUTO 판단 로직
-    │   ├── rtc.h               // RTC 인터페이스
-    │   ├── rtc_hw.cpp          // DS3231 구현체
-    │   ├── sdcard.h            // SD card 인터페이스
-    │   ├── sdcard_hw.cpp       // SD card 구현체
-    │   ├── comms.h/cpp         // ESP-NOW 송수신
-    │   └── led.h/cpp           // SK6812 CO₂ 농도 표시 LED
-    │
-    └── fan_mcu/
-        ├── fan_mcu.ino         // 진입점
-        ├── config.h            // 설정값
-        ├── actuators.h/cpp     // Fan PWM, 커버 모터, limit switch
-        ├── logic.h/cpp         // MANUAL 판단 로직, 타임아웃
-        ├── encoder.h/cpp       // Rotary encoder + 모드 표시 LED 통합
-        └── comms.h/cpp         // ESP-NOW 송수신
+└── UBLO_MKII/
+    └── firmware/
+        ├── fan_mcu/
+        │   ├── build/
+        │   ├── actuators.cpp
+        │   ├── actuators.h
+        │   ├── comms.cpp
+        │   ├── comms.h
+        │   ├── config.h
+        │   ├── encoder.cpp
+        │   ├── encoder.h
+        │   ├── fan_mcu_test.ino
+        │   ├── logic.cpp
+        │   └── logic.h
+        └── sensor_mcu/
+            ├── buffer.cpp
+            ├── buffer.h
+            ├── comms.cpp
+            ├── comms.h
+            ├── config.h
+            ├── led.cpp
+            ├── led.h
+            ├── logic.cpp
+            ├── logic.h
+            ├── rtc_hw.cpp
+            ├── rtc.h
+            ├── sdcard_hw.cpp
+            ├── sdcard.h
+            ├── sensor_mcu_test.ino
+            ├── sensors.cpp
+            └── sensors.h
 ```
 
 ---
