@@ -67,6 +67,10 @@ void setup() {
     unsigned long start = millis();
     while (!Serial && millis() - start < 3000);
 
+    // 실제 MAC 주소 출력 — config.h의 SENSOR_MCU_MAC과 비교용
+    Serial.print("Fan MCU MAC: ");
+    Serial.println(WiFi.macAddress());
+
     actuators_init();
     encoder_init();
     comms_init();
@@ -109,6 +113,9 @@ void loop() {
             Serial.print("[LOGIC] Auto revert to mode: ");
             Serial.println(mode_name(current_mode));
         }
+
+        // Sensor MCU 수신 대기 진입 여유 시간
+        delay(50);
 
         // cover_set() blocking 전에 먼저 mode_packet 전송
         // Sensor MCU의 3초 대기 구간 안에 응답하기 위함

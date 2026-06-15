@@ -16,6 +16,10 @@ void setup() {
     unsigned long start = millis();
     while (!Serial && millis() - start < 3000);
 
+    // 실제 MAC 주소 출력 — config.h의 FAN_MCU_MAC과 비교용
+    Serial.print("Sensor MCU MAC: ");
+    Serial.println(WiFi.macAddress());
+
     rtc_init();
     sdcard_init();
     comms_init();
@@ -51,7 +55,7 @@ void loop() {
         led_set_co2(co2);  // CO₂ 농도에 따라 LED 색상 업데이트
         sample_count++;
 
-        // 10분 주기: 60개 측정값 누적 시 판단
+        // 버퍼 가득 찼을 때 판단
         if (sample_count >= BUFFER_SIZE) {
             sample_count = 0;
 
