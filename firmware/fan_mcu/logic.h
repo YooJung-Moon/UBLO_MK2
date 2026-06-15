@@ -11,6 +11,7 @@ typedef struct {
     uint8_t mode;
     uint8_t fan_cmd;
     uint8_t cover_cmd;
+    uint8_t error;      // 0=정상, 1=cover_open_timeout, 2=cover_close_timeout
 } mode_packet_t;
 
 void logic_init();

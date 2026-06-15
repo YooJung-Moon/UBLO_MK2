@@ -34,6 +34,8 @@ void actuate(mode_packet_t result) {
                 prev_cover_cmd = result.cover_cmd;
             } else {
                 prev_cover_cmd = 255;          // 무효값: 다음 명령 시 무조건 cover_set() 호출
+                result.error = 1;              // cover_open_timeout
+                comms_send(result);            // 에러 정보 Sensor MCU로 전송
                 encoder_error_blink();         // 타임아웃 에러 → LED 4개 깜빡임
                 return;
             }
@@ -54,6 +56,8 @@ void actuate(mode_packet_t result) {
                 prev_cover_cmd = result.cover_cmd;
             } else {
                 prev_cover_cmd = 255;          // 무효값: 다음 명령 시 무조건 cover_set() 호출
+                result.error = 2;              // cover_close_timeout
+                comms_send(result);            // 에러 정보 Sensor MCU로 전송
                 encoder_error_blink();         // 타임아웃 에러 → LED 4개 깜빡임
                 return;
             }

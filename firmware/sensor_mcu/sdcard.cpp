@@ -5,12 +5,10 @@
 
 #define SD_CS_PIN D10
 
-static String current_date = "";
-
 static String get_filename() {
-    String ts = rtc_timestamp();  // "2026-05-14 12:41:00"
-    String date = ts.substring(0, 10);  // "2026-05-14"
-    date.replace("-", "");              // "20260514"
+    String ts = rtc_timestamp();
+    String date = ts.substring(0, 10);
+    date.replace("-", "");
     return "/" + date + ".csv";
 }
 
@@ -18,7 +16,7 @@ static void check_and_create_file(String filename) {
     if (!SD.exists(filename)) {
         File f = SD.open(filename, FILE_WRITE);
         if (f) {
-            f.println("timestamp,co2,temp,humidity,mode,fan_cmd,cover_cmd");
+            f.println("timestamp,co2,temp,humidity,mode,fan_cmd,cover_cmd,error");
             f.close();
             Serial.println("[SD] new file created: " + filename);
         } else {
@@ -45,7 +43,7 @@ void sdcard_log_raw(String timestamp, uint16_t co2, float temp, float humidity) 
         f.print(co2);       f.print(",");
         f.print(temp);      f.print(",");
         f.print(humidity);  f.print(",");
-        f.println(",,");
+        f.println(",,,");   // mode, fan_cmd, cover_cmd, error 비움
         f.close();
         Serial.print("[SD] raw: ");
         Serial.print(timestamp); Serial.print(", ");
@@ -64,10 +62,11 @@ void sdcard_log_decision(String timestamp, uint8_t mode, uint8_t fan_cmd, uint8_
     File f = SD.open(filename, FILE_APPEND);
     if (f) {
         f.print(timestamp); f.print(",");
-        f.print(",,,");
+        f.print(",,,");     // co2, temp, humidity 비움
         f.print(mode);      f.print(",");
         f.print(fan_cmd);   f.print(",");
-        f.println(cover_cmd);
+        f.print(cover_cmd); f.print(",");
+        f.println();        // error 비움
         f.close();
         Serial.print("[SD] decision: mode=");
         Serial.print(mode);    Serial.print(", fan=");
@@ -75,5 +74,26 @@ void sdcard_log_decision(String timestamp, uint8_t mode, uint8_t fan_cmd, uint8_
         Serial.println(cover_cmd);
     } else {
         Serial.println("[SD] decision log failed");
+    }
+}
+
+void sdcard_log_error(String timestamp, uint8_t error) {
+    String filename = get_filename();
+    check_and_create_file(filename);
+
+    String error_str = "";
+    if (error == 1)      error_str = "cover_open_timeout";
+    else if (error == 2) error_str = "cover_close_timeout";
+
+    File f = SD.open(filename, FILE_APPEND);
+    if (f) {
+        f.print(timestamp); f.print(",");
+        f.print(",,,,,,");  // co2, temp, humidity, mode, fan_cmd, cover_cmd 비움
+        f.println(error_str);
+        f.close();
+        Serial.print("[SD] error: ");
+        Serial.println(error_str);
+    } else {
+        Serial.println("[SD] error log failed");
     }
 }

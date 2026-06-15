@@ -32,7 +32,7 @@ void setup() {
 
     buffer_init();
     Serial.println("Sensor MCU ready");
-    Serial.println("timestamp, co2, temp, humidity, mode, fan_cmd, cover_cmd");
+    Serial.println("timestamp, co2, temp, humidity, mode, fan_cmd, cover_cmd, error");
 }
 
 void loop() {
@@ -55,11 +55,11 @@ void loop() {
         led_set_co2(co2);  // CO₂ 농도에 따라 LED 색상 업데이트
         sample_count++;
 
-        // 버퍼 가득 찼을 때 판단
-        if (sample_count >= BUFFER_SIZE) {
+        // 10분 주기: 60개 측정값 누적 시 최근 5분(30개) 평균으로 판단
+        if (sample_count >= DECISION_COUNT) {
             sample_count = 0;
 
-            uint16_t avg_co2 = buffer_average();
+            uint16_t avg_co2 = buffer_average();  // 버퍼의 최근 30개(5분) 평균
             Serial.print("[LOGIC] avg CO2: ");
             Serial.println(avg_co2);
 
@@ -72,7 +72,13 @@ void loop() {
 
             if (comms_mode_available()) {
                 mode_packet_t mp = comms_get_last_mode();
-                sdcard_log_decision(ts, mp.mode, mp.fan_cmd, mp.cover_cmd);
+                if (mp.error > 0) {
+                    // 에러 발생 시 에러 로깅
+                    sdcard_log_error(ts, mp.error);
+                } else {
+                    // 정상 동작 시 decision 로깅
+                    sdcard_log_decision(ts, mp.mode, mp.fan_cmd, mp.cover_cmd);
+                }
             } else {
                 Serial.println("[COMMS] mode_packet timeout");
             }

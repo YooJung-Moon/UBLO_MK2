@@ -7,4 +7,12 @@ typedef struct {
     uint8_t cover_cmd;  // 0=CLOSE, 1=OPEN
 } command_packet_t;
 
-command_packet_t logic_decide(uint16_t avg_co2);
+typedef struct {
+    uint8_t mode;
+    uint8_t fan_cmd;
+    uint8_t cover_cmd;
+    uint8_t error;      // 0=정상, 1=cover_open_timeout, 2=cover_close_timeout
+} mode_packet_t;
+
+void logic_init();
+command_packet_t logic_decide(uint16_t avg_co2);  // CO₂ 평균값으로 fan/cover 판단
