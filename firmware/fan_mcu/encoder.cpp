@@ -78,6 +78,7 @@ static void next_mode() {
     last_rotate_time = millis();
     blink_state = true;
     last_blink_time = millis();
+    last_error_blink_time = millis();  // 에러 깜빡임 타이머 리셋 → 300ms 동안 깜빡임 중단
     led_on(preview_mode);
     Serial.print("CW -> preview mode ");
     Serial.print(preview_mode);
@@ -92,6 +93,7 @@ static void prev_mode() {
     last_rotate_time = millis();
     blink_state = true;
     last_blink_time = millis();
+    last_error_blink_time = millis();  // 에러 깜빡임 타이머 리셋 → 300ms 동안 깜빡임 중단
     led_on(preview_mode);
     Serial.print("CCW -> preview mode ");
     Serial.print(preview_mode);
@@ -171,7 +173,7 @@ static void update_preview() {
 }
 
 // 에러 상태: LED 4개 동시 300ms 깜빡임
-// encoder 입력은 계속 받으므로 사용자가 모드 재선택 가능
+// encoder 돌리면 타이머 리셋 → preview LED가 잘 보임
 static void update_error_blink() {
     if (!error_state) return;
 

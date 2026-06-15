@@ -4,11 +4,11 @@
 #include "logic.h"
 #include "comms.h"
 
-static uint8_t current_mode = MODE_OPEN;   // 초기 모드: OPEN
+static uint8_t current_mode = MODE_OPEN;
 static unsigned long mode_entry_time = 0;
 static command_packet_t last_cmd = {0, 1}; // 초기값: fan OFF, cover OPEN
 static uint8_t prev_fan_cmd = 0;
-static uint8_t prev_cover_cmd = 1;         // OPEN: cover OPEN 상태
+static uint8_t prev_cover_cmd = 1;         // 초기값: 부팅 시 커버 OPEN 상태로 가정
 
 String mode_name(uint8_t mode) {
     switch (mode) {
@@ -33,7 +33,8 @@ void actuate(mode_packet_t result) {
             if (ok) {
                 prev_cover_cmd = result.cover_cmd;
             } else {
-                encoder_error_blink();  // 타임아웃 에러 → LED 4개 깜빡임
+                prev_cover_cmd = 255;          // 무효값: 다음 명령 시 무조건 cover_set() 호출
+                encoder_error_blink();         // 타임아웃 에러 → LED 4개 깜빡임
                 return;
             }
         }
@@ -52,7 +53,8 @@ void actuate(mode_packet_t result) {
             if (ok) {
                 prev_cover_cmd = result.cover_cmd;
             } else {
-                encoder_error_blink();  // 타임아웃 에러 → LED 4개 깜빡임
+                prev_cover_cmd = 255;          // 무효값: 다음 명령 시 무조건 cover_set() 호출
+                encoder_error_blink();         // 타임아웃 에러 → LED 4개 깜빡임
                 return;
             }
         }
