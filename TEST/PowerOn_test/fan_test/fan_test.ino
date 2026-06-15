@@ -1,4 +1,4 @@
-#define FAN_PIN 9  
+#define FAN_PIN D7 
 
 #define PWM_CHANNEL 0
 #define PWM_FREQ 25000
