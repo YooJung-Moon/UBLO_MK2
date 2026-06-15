@@ -32,46 +32,8 @@ void fan_set(uint8_t cmd) {
     }
 }
 
+// 커버 모터 고장 — 커버 항상 OPEN 상태로 고정
 bool cover_set(uint8_t cmd) {
-    unsigned long start = millis();
-
-    if (cmd == 1) {
-        // OPEN: 모터 정방향
-        Serial.println("Cover opening...");
-        digitalWrite(MOTOR_IN1, HIGH);
-        digitalWrite(MOTOR_IN2, LOW);
-        while (digitalRead(LIM_OPEN) == HIGH) {
-            if (millis() - start >= COVER_TIMEOUT_MS) {
-                // 타임아웃: 모터 즉시 정지 후 에러 반환
-                digitalWrite(MOTOR_IN1, LOW);
-                digitalWrite(MOTOR_IN2, LOW);
-                Serial.println("[ERROR] Cover open timeout!");
-                return false;
-            }
-            delay(10);
-        }
-        digitalWrite(MOTOR_IN1, LOW);
-        digitalWrite(MOTOR_IN2, LOW);
-        Serial.println("Cover opened");
-    } else {
-        // CLOSE: 모터 역방향
-        Serial.println("Cover closing...");
-        digitalWrite(MOTOR_IN1, LOW);
-        digitalWrite(MOTOR_IN2, HIGH);
-        while (digitalRead(LIM_CLOSE) == HIGH) {
-            if (millis() - start >= COVER_TIMEOUT_MS) {
-                // 타임아웃: 모터 즉시 정지 후 에러 반환
-                digitalWrite(MOTOR_IN1, LOW);
-                digitalWrite(MOTOR_IN2, LOW);
-                Serial.println("[ERROR] Cover close timeout!");
-                return false;
-            }
-            delay(10);
-        }
-        digitalWrite(MOTOR_IN1, LOW);
-        digitalWrite(MOTOR_IN2, LOW);
-        Serial.println("Cover closed");
-    }
-
+    Serial.println("[COVER] Motor disabled — cover fixed OPEN");
     return true;
 }
