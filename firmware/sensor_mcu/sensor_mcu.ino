@@ -46,20 +46,21 @@ void loop() {
         float temp, humidity;
         if (!sensors_read(co2, temp, humidity)) {
             Serial.println("Sensor read failed, skipping");
+            led_set_error_sensor();  // 추가
             return;
         }
 
         String ts = rtc_timestamp();
         sdcard_log_raw(ts, co2, temp, humidity);
         buffer_add(co2);
-        led_set_co2(co2);  // CO₂ 농도에 따라 LED 색상 업데이트
+        led_set_co2(co2);
         sample_count++;
 
         // 10분 주기: 60개 측정값 누적 시 최근 5분(30개) 평균으로 판단
         if (sample_count >= DECISION_COUNT) {
             sample_count = 0;
 
-            uint16_t avg_co2 = buffer_average();  // 버퍼의 최근 30개(5분) 평균
+            uint16_t avg_co2 = buffer_average();
             Serial.print("[LOGIC] avg CO2: ");
             Serial.println(avg_co2);
 
