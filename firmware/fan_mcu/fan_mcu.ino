@@ -12,13 +12,6 @@ static uint8_t prev_cover_cmd = 1;         // 초기값: 부팅 시 커버 OPEN 
 
 // ── 테스트 모드 ──────────────────────────────────────────
 #if TEST_MODE
-// 세트 A~F: 경계 중복 없는 순서
-// A: OPEN→TURBO→CLOSE
-// B: TURBO→CLOSE→OPEN
-// C: CLOSE→TURBO→OPEN
-// D: TURBO→OPEN→CLOSE
-// E: OPEN→CLOSE→TURBO
-// F: CLOSE→OPEN→TURBO
 static const uint8_t TEST_SEQUENCE[] = {
     MODE_OPEN,  MODE_TURBO, MODE_CLOSE,  // A
     MODE_TURBO, MODE_CLOSE, MODE_OPEN,   // B
@@ -27,11 +20,12 @@ static const uint8_t TEST_SEQUENCE[] = {
     MODE_OPEN,  MODE_CLOSE, MODE_TURBO,  // E
     MODE_CLOSE, MODE_OPEN,  MODE_TURBO,  // F
 };
-static const int TEST_SEQUENCE_LEN = sizeof(TEST_SEQUENCE); // 18
-static const int TEST_TOTAL_STEPS  = 20;  // 20세트 = 120분
+static const int TEST_SEQUENCE_LEN = sizeof(TEST_SEQUENCE);  // 18
+static const int TEST_TOTAL_STEPS  = 60;  // 20세트 × 3모드 = 2시간
 
-static int  test_step        = 0;
+static int  test_step = 0;
 static unsigned long test_step_start = 0;
+static bool test_done = false;
 #endif
 // ─────────────────────────────────────────────────────────
 
@@ -90,21 +84,42 @@ void actuate(mode_packet_t result) {
 // ── 테스트 스텝 전환 함수 ─────────────────────────────────
 #if TEST_MODE
 void test_apply_step(int step) {
-    uint8_t mode = TEST_SEQUENCE[step % TEST_SEQUENCE_LEN];
+    uint8_t mode    = TEST_SEQUENCE[step % TEST_SEQUENCE_LEN];
+    int set_num     = step / 3 + 1;
+    int step_in_set = step % 3 + 1;
+    char set_label  = 'A' + (step % TEST_SEQUENCE_LEN) / 3;
+
     current_mode = mode;
     mode_entry_time = millis();
     encoder_set_mode(current_mode);
 
-    Serial.print("[TEST] Step ");
-    Serial.print(step + 1);
-    Serial.print("/");
-    Serial.print(TEST_TOTAL_STEPS);
-    Serial.print(" → ");
+    Serial.print("[TEST] Set ");
+    Serial.print(set_num);
+    Serial.print("/20 - Step ");
+    Serial.print(step_in_set);
+    Serial.print("/3 (");
+    Serial.print(set_label);
+    Serial.print(") → ");
     Serial.println(mode_name(current_mode));
 
     mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
-    comms_send(result);   // Sensor MCU에 전송 → 로깅 트리거
+    comms_send(result);
     actuate(result);
+}
+
+void test_finish() {
+    // OPEN 상태로 복귀
+    current_mode = MODE_OPEN;
+    mode_entry_time = millis();
+    encoder_set_mode(current_mode);
+
+    mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
+    comms_send(result);
+    actuate(result);
+
+    Serial.println("[TEST] Test complete → OPEN");
+    Serial.println("[TEST] Resuming normal operation");
+    test_done = true;
 }
 #endif
 // ─────────────────────────────────────────────────────────
@@ -127,8 +142,9 @@ void setup() {
 #if TEST_MODE
     Serial.println("[TEST] Test mode enabled");
     test_step = 0;
+    test_done = false;
     test_step_start = millis();
-    test_apply_step(test_step);  // 첫 스텝 즉시 실행
+    test_apply_step(test_step);
 #else
     Serial.print("Initial mode: ");
     Serial.println(mode_name(current_mode));
@@ -137,21 +153,21 @@ void setup() {
 
 void loop() {
 #if TEST_MODE
-    // 테스트 완료 시 중단
-    if (test_step >= TEST_TOTAL_STEPS) return;
-
-    // 2분 경과 시 다음 스텝으로
-    if (millis() - test_step_start >= TEST_STEP_MS) {
-        test_step++;
-        test_step_start = millis();
-        if (test_step < TEST_TOTAL_STEPS) {
-            test_apply_step(test_step);
-        } else {
-            Serial.println("[TEST] Test complete");
+    if (!test_done) {
+        if (millis() - test_step_start >= TEST_STEP_MS) {
+            test_step++;
+            test_step_start = millis();
+            if (test_step < TEST_TOTAL_STEPS) {
+                test_apply_step(test_step);
+            } else {
+                test_finish();
+            }
         }
+        return;  // 테스트 진행 중엔 encoder/comms 무시
     }
+    // test_done = true → 아래 일반 동작으로 fall-through
+#endif
 
-#else
     encoder_update();
 
     if (encoder_changed()) {
@@ -194,5 +210,4 @@ void loop() {
         Serial.print("[LOGIC] Auto revert to mode: ");
         Serial.println(mode_name(current_mode));
     }
-#endif
 }
