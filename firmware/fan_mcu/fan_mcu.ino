@@ -21,7 +21,7 @@ static const uint8_t TEST_SEQUENCE[] = {
     MODE_CLOSE, MODE_OPEN,  MODE_TURBO,  // F
 };
 static const int TEST_SEQUENCE_LEN = sizeof(TEST_SEQUENCE);  // 18
-static const int TEST_TOTAL_STEPS  = 60;  // 20세트 × 3모드 = 2시간
+static const int TEST_TOTAL_STEPS  = 60;  // 20세트 × 3모드 = 1시간
 
 static int  test_step = 0;
 static unsigned long test_step_start = 0;
