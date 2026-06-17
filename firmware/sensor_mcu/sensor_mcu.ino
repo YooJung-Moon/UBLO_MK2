@@ -16,7 +16,6 @@ void setup() {
     unsigned long start = millis();
     while (!Serial && millis() - start < 3000);
 
-    // 실제 MAC 주소 출력 — config.h의 FAN_MCU_MAC과 비교용
     Serial.print("Sensor MCU MAC: ");
     Serial.println(WiFi.macAddress());
 
@@ -38,6 +37,17 @@ void setup() {
 void loop() {
     unsigned long now = millis();
 
+    // Fan MCU 능동 전송 수신 → 항상 감지 (테스트 모드 대응)
+    if (comms_mode_available()) {
+        String ts = rtc_timestamp();
+        mode_packet_t mp = comms_get_last_mode();
+        if (mp.error > 0) {
+            sdcard_log_error(ts, mp.error);
+        } else {
+            sdcard_log_decision(ts, mp.mode, mp.fan_cmd, mp.cover_cmd);
+        }
+    }
+
     // 10초 주기: sensor 읽기 + raw logging + 버퍼 추가
     if (now - last_sensor_time >= SENSOR_INTERVAL) {
         last_sensor_time = now;
@@ -46,7 +56,6 @@ void loop() {
         float temp, humidity;
         if (!sensors_read(co2, temp, humidity)) {
             Serial.println("Sensor read failed, skipping");
-            led_set_error_sensor();  // 추가
             return;
         }
 
@@ -56,7 +65,7 @@ void loop() {
         led_set_co2(co2);
         sample_count++;
 
-        // 10분 주기: 60개 측정값 누적 시 최근 5분(30개) 평균으로 판단
+        // 10분 주기: 판단 및 로깅
         if (sample_count >= DECISION_COUNT) {
             sample_count = 0;
 
@@ -68,16 +77,15 @@ void loop() {
             comms_send(cmd);
 
             // mode_packet 수신 대기 (최대 3초)
+            // 단, 이미 위에서 처리된 경우 중복 로깅 방지를 위해 skip
             unsigned long wait_start = millis();
             while (!comms_mode_available() && millis() - wait_start < 3000);
 
             if (comms_mode_available()) {
                 mode_packet_t mp = comms_get_last_mode();
                 if (mp.error > 0) {
-                    // 에러 발생 시 에러 로깅
                     sdcard_log_error(ts, mp.error);
                 } else {
-                    // 정상 동작 시 decision 로깅
                     sdcard_log_decision(ts, mp.mode, mp.fan_cmd, mp.cover_cmd);
                 }
             } else {

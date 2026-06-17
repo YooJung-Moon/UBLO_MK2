@@ -35,3 +35,7 @@ const uint8_t SENSOR_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAE, 0x7A, 0xD4}; // pair 2
 #define MODE_CLOSE   1
 #define MODE_OPEN    2
 #define MODE_TURBO   3
+
+// 테스트 모드
+#define TEST_MODE       true
+#define TEST_STEP_MS    120000  // 모드당 2분

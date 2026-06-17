@@ -10,6 +10,31 @@ static command_packet_t last_cmd = {0, 1}; // 초기값: fan OFF, cover OPEN
 static uint8_t prev_fan_cmd = 0;
 static uint8_t prev_cover_cmd = 1;         // 초기값: 부팅 시 커버 OPEN 상태로 가정
 
+// ── 테스트 모드 ──────────────────────────────────────────
+#if TEST_MODE
+// 세트 A~F: 경계 중복 없는 순서
+// A: OPEN→TURBO→CLOSE
+// B: TURBO→CLOSE→OPEN
+// C: CLOSE→TURBO→OPEN
+// D: TURBO→OPEN→CLOSE
+// E: OPEN→CLOSE→TURBO
+// F: CLOSE→OPEN→TURBO
+static const uint8_t TEST_SEQUENCE[] = {
+    MODE_OPEN,  MODE_TURBO, MODE_CLOSE,  // A
+    MODE_TURBO, MODE_CLOSE, MODE_OPEN,   // B
+    MODE_CLOSE, MODE_TURBO, MODE_OPEN,   // C
+    MODE_TURBO, MODE_OPEN,  MODE_CLOSE,  // D
+    MODE_OPEN,  MODE_CLOSE, MODE_TURBO,  // E
+    MODE_CLOSE, MODE_OPEN,  MODE_TURBO,  // F
+};
+static const int TEST_SEQUENCE_LEN = sizeof(TEST_SEQUENCE); // 18
+static const int TEST_TOTAL_STEPS  = 20;  // 20세트 = 120분
+
+static int  test_step        = 0;
+static unsigned long test_step_start = 0;
+#endif
+// ─────────────────────────────────────────────────────────
+
 String mode_name(uint8_t mode) {
     switch (mode) {
         case MODE_AUTO:  return "AUTO";
@@ -20,9 +45,6 @@ String mode_name(uint8_t mode) {
     }
 }
 
-// 액추에이터 실행 함수
-// OPEN 방향: 커버 먼저 열고 → fan ON
-// CLOSE 방향: fan 먼저 끄고 → 커버 닫기
 void actuate(mode_packet_t result) {
     bool ok = true;
 
@@ -33,10 +55,10 @@ void actuate(mode_packet_t result) {
             if (ok) {
                 prev_cover_cmd = result.cover_cmd;
             } else {
-                prev_cover_cmd = 255;          // 무효값: 다음 명령 시 무조건 cover_set() 호출
-                result.error = 1;              // cover_open_timeout
-                comms_send(result);            // 에러 정보 Sensor MCU로 전송
-                encoder_error_blink();         // 타임아웃 에러 → LED 4개 깜빡임
+                prev_cover_cmd = 255;
+                result.error = 1;
+                comms_send(result);
+                encoder_error_blink();
                 return;
             }
         }
@@ -55,15 +77,37 @@ void actuate(mode_packet_t result) {
             if (ok) {
                 prev_cover_cmd = result.cover_cmd;
             } else {
-                prev_cover_cmd = 255;          // 무효값: 다음 명령 시 무조건 cover_set() 호출
-                result.error = 2;              // cover_close_timeout
-                comms_send(result);            // 에러 정보 Sensor MCU로 전송
-                encoder_error_blink();         // 타임아웃 에러 → LED 4개 깜빡임
+                prev_cover_cmd = 255;
+                result.error = 2;
+                comms_send(result);
+                encoder_error_blink();
                 return;
             }
         }
     }
 }
+
+// ── 테스트 스텝 전환 함수 ─────────────────────────────────
+#if TEST_MODE
+void test_apply_step(int step) {
+    uint8_t mode = TEST_SEQUENCE[step % TEST_SEQUENCE_LEN];
+    current_mode = mode;
+    mode_entry_time = millis();
+    encoder_set_mode(current_mode);
+
+    Serial.print("[TEST] Step ");
+    Serial.print(step + 1);
+    Serial.print("/");
+    Serial.print(TEST_TOTAL_STEPS);
+    Serial.print(" → ");
+    Serial.println(mode_name(current_mode));
+
+    mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
+    comms_send(result);   // Sensor MCU에 전송 → 로깅 트리거
+    actuate(result);
+}
+#endif
+// ─────────────────────────────────────────────────────────
 
 void setup() {
     delay(3000);
@@ -71,7 +115,6 @@ void setup() {
     unsigned long start = millis();
     while (!Serial && millis() - start < 3000);
 
-    // 실제 MAC 주소 출력 — config.h의 SENSOR_MCU_MAC과 비교용
     Serial.print("Fan MCU MAC: ");
     Serial.println(WiFi.macAddress());
 
@@ -80,15 +123,37 @@ void setup() {
     comms_init();
 
     Serial.println("Fan MCU ready");
+
+#if TEST_MODE
+    Serial.println("[TEST] Test mode enabled");
+    test_step = 0;
+    test_step_start = millis();
+    test_apply_step(test_step);  // 첫 스텝 즉시 실행
+#else
     Serial.print("Initial mode: ");
     Serial.println(mode_name(current_mode));
+#endif
 }
 
 void loop() {
-    // encoder 회전 및 버튼 상태 항상 감지
+#if TEST_MODE
+    // 테스트 완료 시 중단
+    if (test_step >= TEST_TOTAL_STEPS) return;
+
+    // 2분 경과 시 다음 스텝으로
+    if (millis() - test_step_start >= TEST_STEP_MS) {
+        test_step++;
+        test_step_start = millis();
+        if (test_step < TEST_TOTAL_STEPS) {
+            test_apply_step(test_step);
+        } else {
+            Serial.println("[TEST] Test complete");
+        }
+    }
+
+#else
     encoder_update();
 
-    // 버튼 눌림 시 mode_confirmed → current_mode 갱신
     if (encoder_changed()) {
         current_mode = encoder_get_mode();
         mode_entry_time = millis();
@@ -99,7 +164,6 @@ void loop() {
         actuate(result);
     }
 
-    // Sensor MCU로부터 command_packet 수신 시 처리
     if (comms_command_available()) {
         last_cmd = comms_get_last_command();
         Serial.print("[COMMS] command_packet received — fan: ");
@@ -109,7 +173,6 @@ void loop() {
 
         mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
 
-        // MANUAL 타임아웃으로 AUTO 복귀 감지
         if (result.mode != current_mode) {
             current_mode = result.mode;
             mode_entry_time = millis();
@@ -118,17 +181,11 @@ void loop() {
             Serial.println(mode_name(current_mode));
         }
 
-        // Sensor MCU 수신 대기 진입 여유 시간
         delay(50);
-
-        // cover_set() blocking 전에 먼저 mode_packet 전송
-        // Sensor MCU의 3초 대기 구간 안에 응답하기 위함
         comms_send(result);
-
         actuate(result);
     }
 
-    // MANUAL 모드 타임아웃 체크 — command_packet 수신과 무관하게 항상 실행
     mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
     if (result.mode != current_mode) {
         current_mode = result.mode;
@@ -137,4 +194,5 @@ void loop() {
         Serial.print("[LOGIC] Auto revert to mode: ");
         Serial.println(mode_name(current_mode));
     }
+#endif
 }
