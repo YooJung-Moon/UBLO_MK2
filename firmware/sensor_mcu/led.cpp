@@ -20,7 +20,7 @@ void led_set_co2(uint16_t co2) {
     if (co2 <= CO2_GREEN) {
         strip.setPixelColor(0, strip.Color(0, 100, 0));    // GRB: 초록
     } else if (co2 <= CO2_YELLOW) {
-        strip.setPixelColor(0, strip.Color(60, 50, 0));    // GRB: 노랑
+        strip.setPixelColor(0, strip.Color(50, 50, 0));    // GRB: 노랑
     } else {
         strip.setPixelColor(0, strip.Color(100, 0, 0));    // GRB: 빨강
     }
@@ -28,6 +28,6 @@ void led_set_co2(uint16_t co2) {
 }
 
 void led_set_error_sensor() {
-    strip.setPixelColor(0, strip.Color(100, 100, 100));  // GRB: 흰색
+    strip.setPixelColor(0, strip.Color(50, 50, 50));  // GRB: 흰색
     strip.show();
 }
