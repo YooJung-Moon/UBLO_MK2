@@ -4,11 +4,12 @@
 #include "logic.h"
 #include "comms.h"
 
-static uint8_t current_mode = MODE_AUTO;
+static uint8_t current_mode = MODE_OPEN;
 static unsigned long mode_entry_time = 0;
-static command_packet_t last_cmd = {0, 0}; // 초기값: fan OFF, cover CLOSE
+static command_packet_t last_cmd = {0, 1}; // 초기값: fan OFF, cover OPEN
 static uint8_t prev_fan_cmd = 0;
-static uint8_t prev_cover_cmd = 0;         // 초기값: 부팅 시 커버 CLOSE 상태로 가정
+static uint8_t prev_cover_cmd = 1;         // 초기값: 부팅 시 커버 OPEN 상태로 가정
+static bool comms_lost_close = false;      // 통신 두절로 CLOSE 전환된 경우 true
 
 String mode_name(uint8_t mode) {
     switch (mode) {
@@ -92,6 +93,7 @@ void loop() {
     if (encoder_changed()) {
         current_mode = encoder_get_mode();
         mode_entry_time = millis();
+        comms_lost_close = false;  // 사용자가 직접 모드 변경 → 플래그 해제
         Serial.print("[ENCODER] Mode changed to: ");
         Serial.println(mode_name(current_mode));
 
@@ -106,6 +108,15 @@ void loop() {
         Serial.print(last_cmd.fan_cmd);
         Serial.print(" | cover: ");
         Serial.println(last_cmd.cover_cmd);
+
+        // 통신 두절로 CLOSE 전환된 상태였으면 AUTO로 복귀
+        if (comms_lost_close) {
+            comms_lost_close = false;
+            current_mode = MODE_AUTO;
+            mode_entry_time = millis();
+            encoder_set_mode(current_mode);
+            Serial.println("[COMMS] Comms restored → AUTO");
+        }
 
         mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
 
@@ -131,10 +142,19 @@ void loop() {
     // MANUAL 모드 타임아웃 체크 — command_packet 수신과 무관하게 항상 실행
     mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
     if (result.mode != current_mode) {
-        current_mode = result.mode;
+        // 타임아웃 발생 시 통신 상태 확인
+        // 패킷 주기(5분)의 2배인 10분 동안 수신 없으면 통신 두절로 판단
+        if (comms_last_cmd_age() >= 600000UL) {
+            current_mode = MODE_CLOSE;  // 통신 두절: AUTO 대신 CLOSE로 전환
+            comms_lost_close = true;    // 통신 복구 시 AUTO로 자동 복귀하기 위한 플래그
+            Serial.println("[LOGIC] Timeout + comms lost → CLOSE");
+        } else {
+            current_mode = result.mode;  // 통신 정상: AUTO로 전환
+            Serial.println("[LOGIC] Auto revert to mode: AUTO");
+        }
         mode_entry_time = millis();
         encoder_set_mode(current_mode);
-        Serial.print("[LOGIC] Auto revert to mode: ");
-        Serial.println(mode_name(current_mode));
+        result = logic_update(current_mode, last_cmd, mode_entry_time);  // 새 모드로 재계산
+        actuate(result);  // 타임아웃 직후 즉시 액추에이션
     }
 }
