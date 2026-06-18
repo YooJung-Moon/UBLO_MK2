@@ -2,14 +2,14 @@
 #include "config.h"
 
 #define MODE_COUNT          4
-#define PREVIEW_TIMEOUT     10000  // 10초 후 current_mode로 복귀
+#define PREVIEW_TIMEOUT     7000  // 7초 후 current_mode로 복귀
 #define PREVIEW_BLINK_MS    500    // preview 깜빡임 간격 (ms)
 #define CONFIRM_BLINK_MS    100    // 확정 시 깜빡임 간격 (ms)
 #define CONFIRM_BLINK_COUNT 3      // 확정 시 깜빡임 횟수
 #define ERROR_BLINK_MS      300    // 에러 깜빡임 간격 (ms)
 
-static uint8_t current_mode = MODE_OPEN;  // 초기 모드: OPEN
-static uint8_t preview_mode = MODE_OPEN;
+static uint8_t current_mode = MODE_AUTO;  // 초기 모드: AUTO
+static uint8_t preview_mode = MODE_AUTO;
 static bool mode_confirmed = false;
 static bool in_preview = false;
 static unsigned long last_rotate_time = 0;
@@ -78,7 +78,7 @@ static void next_mode() {
     last_rotate_time = millis();
     blink_state = true;
     last_blink_time = millis();
-    last_error_blink_time = millis();  // 에러 깜빡임 타이머 리셋 → 300ms 동안 깜빡임 중단
+    last_error_blink_time = millis();    // 에러 깜빡임 타이머 리셋 → 300ms 동안 깜빡임 중단
     led_on(preview_mode);
     Serial.print("CW -> preview mode ");
     Serial.print(preview_mode);
@@ -93,7 +93,7 @@ static void prev_mode() {
     last_rotate_time = millis();
     blink_state = true;
     last_blink_time = millis();
-    last_error_blink_time = millis();  // 에러 깜빡임 타이머 리셋 → 300ms 동안 깜빡임 중단
+    last_error_blink_time = millis();    // 에러 깜빡임 타이머 리셋 → 300ms 동안 깜빡임 중단
     led_on(preview_mode);
     Serial.print("CCW -> preview mode ");
     Serial.print(preview_mode);
@@ -106,7 +106,6 @@ static void check_encoder() {
     int lsb = digitalRead(ENC_B_PIN);
     int encoded = (msb << 1) | lsb;
 
-    // 이전/현재 상태 조합으로 회전 방향 판별
     int sum = (last_encoded << 2) | encoded;
 
     if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) encoder_step++;
@@ -134,8 +133,6 @@ static void check_button() {
             stable_button_state = reading;
 
             if (stable_button_state == LOW) {
-                // 에러 상태 해제 후 모드 확정
-                // 에러 상태에서도 버튼으로 모드 재선택 가능
                 error_state = false;
                 current_mode = preview_mode;
                 in_preview = false;
@@ -149,7 +146,6 @@ static void check_button() {
     last_button_reading = reading;
 }
 
-// preview 중 500ms 깜빡임 및 10초 타임아웃 처리
 static void update_preview() {
     if (!in_preview) return;
 
@@ -172,8 +168,6 @@ static void update_preview() {
     }
 }
 
-// 에러 상태: LED 4개 동시 300ms 깜빡임
-// encoder 돌리면 타이머 리셋 → preview LED가 잘 보임
 static void update_error_blink() {
     if (!error_state) return;
 
@@ -210,11 +204,9 @@ void encoder_init() {
     Serial.println("Mode input: 0=AUTO, 1=CLOSE, 2=OPEN, 3=TURBO");
 }
 
-// loop()에서 항상 호출
 void encoder_update() {
     check_encoder();
     check_button();
-    // 에러 상태면 4개 LED 깜빡임, 아니면 preview 처리
     if (error_state) {
         update_error_blink();
     } else {
@@ -234,7 +226,6 @@ uint8_t encoder_get_mode() {
     return current_mode;
 }
 
-// 타임아웃/AUTO 복귀 시 외부에서 모드 강제 설정
 void encoder_set_mode(uint8_t mode) {
     current_mode = mode;
     preview_mode = mode;
@@ -242,7 +233,6 @@ void encoder_set_mode(uint8_t mode) {
     show_mode_led(current_mode);
 }
 
-// 커버 타임아웃 에러 발생 시 fan_mcu.ino의 actuate()에서 호출
 void encoder_error_blink() {
     error_state = true;
     in_preview = false;
