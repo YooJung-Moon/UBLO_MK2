@@ -2,7 +2,7 @@
 #include "config.h"
 
 #define MODE_COUNT          4
-#define PREVIEW_TIMEOUT     7000  // 7초 후 current_mode로 복귀
+#define PREVIEW_TIMEOUT     5000  // 5초 후 current_mode로 복귀
 #define PREVIEW_BLINK_MS    500    // preview 깜빡임 간격 (ms)
 #define CONFIRM_BLINK_MS    100    // 확정 시 깜빡임 간격 (ms)
 #define CONFIRM_BLINK_COUNT 3      // 확정 시 깜빡임 횟수
@@ -78,7 +78,7 @@ static void next_mode() {
     last_rotate_time = millis();
     blink_state = true;
     last_blink_time = millis();
-    last_error_blink_time = millis();    // 에러 깜빡임 타이머 리셋 → 300ms 동안 깜빡임 중단
+    last_error_blink_time = millis();
     led_on(preview_mode);
     Serial.print("CW -> preview mode ");
     Serial.print(preview_mode);
@@ -93,7 +93,7 @@ static void prev_mode() {
     last_rotate_time = millis();
     blink_state = true;
     last_blink_time = millis();
-    last_error_blink_time = millis();    // 에러 깜빡임 타이머 리셋 → 300ms 동안 깜빡임 중단
+    last_error_blink_time = millis();
     led_on(preview_mode);
     Serial.print("CCW -> preview mode ");
     Serial.print(preview_mode);
