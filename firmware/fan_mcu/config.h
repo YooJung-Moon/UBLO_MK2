@@ -35,3 +35,6 @@ const uint8_t SENSOR_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAD, 0xE2, 0x14}; // pair 3
 #define MODE_CLOSE   1
 #define MODE_OPEN    2
 #define MODE_TURBO   3
+
+// 풍량 (0~100)
+#define FAN_SPEED_PCT 90
