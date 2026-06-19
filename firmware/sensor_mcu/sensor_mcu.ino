@@ -33,6 +33,19 @@ void setup() {
     buffer_init();
     Serial.println("Sensor MCU ready");
     Serial.println("timestamp, co2, temp, humidity, mode, fan_cmd, cover_cmd, error");
+
+    // 부팅 직후 즉시 첫 판단 전송 (버퍼 누적 대기 없이)
+    // Fan MCU가 AUTO 모드로 부팅했을 때 첫 command_packet을 즉시 받을 수 있도록
+    delay(2000);  // SCD41 웜업 대기
+    uint16_t co2;
+    float temp, humidity;
+    if (sensors_read(co2, temp, humidity)) {
+        command_packet_t cmd = logic_decide(co2);
+        comms_send(cmd);
+        Serial.println("[BOOT] Initial command_packet sent");
+    } else {
+        Serial.println("[BOOT] Initial sensor read failed, skipping");
+    }
 }
 
 void loop() {
@@ -46,7 +59,7 @@ void loop() {
         float temp, humidity;
         if (!sensors_read(co2, temp, humidity)) {
             Serial.println("Sensor read failed, skipping");
-            led_set_error_sensor();  // 추가
+            led_set_error_sensor();
             return;
         }
 
@@ -56,7 +69,7 @@ void loop() {
         led_set_co2(co2);
         sample_count++;
 
-        // 10분 주기: 60개 측정값 누적 시 최근 5분(30개) 평균으로 판단
+        // 5분 주기: 30개 측정값 누적 시 최근 5분 평균으로 판단
         if (sample_count >= DECISION_COUNT) {
             sample_count = 0;
 
@@ -74,10 +87,8 @@ void loop() {
             if (comms_mode_available()) {
                 mode_packet_t mp = comms_get_last_mode();
                 if (mp.error > 0) {
-                    // 에러 발생 시 에러 로깅
                     sdcard_log_error(ts, mp.error);
                 } else {
-                    // 정상 동작 시 decision 로깅
                     sdcard_log_decision(ts, mp.mode, mp.fan_cmd, mp.cover_cmd);
                 }
             } else {
