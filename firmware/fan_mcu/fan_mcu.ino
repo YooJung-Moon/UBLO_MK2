@@ -7,8 +7,8 @@
 static uint8_t current_mode = MODE_AUTO;
 static unsigned long mode_entry_time = 0;
 static command_packet_t last_cmd = {0, 0}; // 초기값: fan OFF, cover CLOSE
-static uint8_t prev_fan_cmd = 0;
-static uint8_t prev_cover_cmd = 0;         // 초기값: 부팅 시 커버 CLOSE 상태로 가정
+static uint8_t prev_fan_cmd = 255;         // 무효값: 첫 명령 시 무조건 실행
+static uint8_t prev_cover_cmd = 255;       // 무효값: 첫 명령 시 무조건 실행
 
 String mode_name(uint8_t mode) {
     switch (mode) {
