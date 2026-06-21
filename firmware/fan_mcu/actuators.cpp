@@ -1,7 +1,7 @@
 #include "actuators.h"
 #include "config.h"
 
-#define COVER_TIMEOUT_MS 5000  // 리밋스위치 미감지 시 타임아웃 (5초)
+#define COVER_TIMEOUT_MS 15000  // 리밋스위치 미감지 시 타임아웃 (15초)
 
 void actuators_init() {
     pinMode(MOTOR_IN1,  OUTPUT);
