@@ -48,7 +48,7 @@ void loop() {
         float temp, humidity;
         if (!sensors_read(co2, temp, humidity)) {
             Serial.println("Sensor read failed, skipping");
-            led_set_error_sensor();  // 추가
+            led_set_error_sensor();
             return;
         }
 
@@ -58,7 +58,7 @@ void loop() {
         led_set_co2(co2);
         sample_count++;
 
-        // 10분 주기: 60개 측정값 누적 시 최근 5분(30개) 평균으로 판단
+        // 판단 주기: DECISION_COUNT개 측정값 누적 시 평균으로 판단
         if (sample_count >= DECISION_COUNT) {
             sample_count = 0;
 
@@ -86,20 +86,20 @@ void loop() {
                 if (all_received) break;  // 전부 응답 왔으면 3초 다 안 기다리고 진행
             }
 
-            // 3. Fan MCU별로 응답 온 것만 로깅, 안 온 것은 타임아웃 로깅
+            // 3. Fan MCU별로 응답 온 것만 로깅, 안 온 것은 comms_lost 로깅
             for (uint8_t i = 0; i < FAN_MCU_COUNT; i++) {
                 if (comms_mode_available(i)) {
                     mode_packet_t mp = comms_get_last_mode(i);
                     if (mp.error > 0) {
-                        // 에러 발생 시 에러 로깅
                         sdcard_log_error(ts, i, mp.error);
                     } else {
-                        // 정상 동작 시 decision 로깅
                         sdcard_log_decision(ts, i, mp.mode, mp.fan_cmd, mp.cover_cmd);
                     }
                 } else {
+                    // mode_packet 미수신 → 통신 두절로 간주하고 로깅
                     Serial.print("[COMMS] mode_packet timeout — fan index ");
                     Serial.println(i);
+                    sdcard_log_comms_lost(ts, i);
                 }
             }
         }

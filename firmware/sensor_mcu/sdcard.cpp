@@ -131,3 +131,22 @@ void sdcard_log_error(String timestamp, uint8_t fan_index, uint8_t error) {
         Serial.println("[SD] error log failed: " + filename);
     }
 }
+
+void sdcard_log_comms_lost(String timestamp, uint8_t fan_index) {
+    String filename = get_filename(fan_index);
+    check_and_create_file(fan_index, filename);
+    String mac_str = mac_to_string(FAN_MCU_MACS[fan_index]);
+
+    File f = SD.open(filename, FILE_APPEND);
+    if (f) {
+        f.print(timestamp); f.print(",");
+        f.print(mac_str);   f.print(",");
+        f.print(",,,,,,");  // co2, temp, humidity, mode, fan_cmd, cover_cmd 비움
+        f.println("comms_lost");
+        f.close();
+        Serial.print("[SD] comms_lost: mac=");
+        Serial.println(mac_str);
+    } else {
+        Serial.println("[SD] comms_lost log failed: " + filename);
+    }
+}
