@@ -15,4 +15,6 @@ typedef struct {
 } mode_packet_t;
 
 void logic_init();
-mode_packet_t logic_update(uint8_t current_mode, command_packet_t cmd, unsigned long entry_time);
+mode_packet_t logic_update(uint8_t current_mode, command_packet_t cmd,
+                           unsigned long entry_time, unsigned long last_packet_time);
+bool logic_is_comms_lost_close();  // 통신 두절로 CLOSE 전환된 상태인지 확인

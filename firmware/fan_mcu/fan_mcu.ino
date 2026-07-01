@@ -6,6 +6,7 @@
 
 static uint8_t current_mode = MODE_AUTO;
 static unsigned long mode_entry_time = 0;
+static unsigned long last_packet_time = 0;  // 마지막 command_packet 수신 시각
 static command_packet_t last_cmd = {0, 0}; // 초기값: fan OFF, cover CLOSE
 static uint8_t prev_fan_cmd = 255;         // 무효값: 첫 명령 시 무조건 실행
 static uint8_t prev_cover_cmd = 255;       // 무효값: 첫 명령 시 무조건 실행
@@ -71,6 +72,8 @@ void setup() {
     unsigned long start = millis();
     while (!Serial && millis() - start < 3000);
 
+    last_packet_time = millis();  // 부팅 시각으로 초기화
+
     // 실제 MAC 주소 출력 — config.h의 SENSOR_MCU_MAC과 비교용
     Serial.print("Fan MCU MAC: ");
     Serial.println(WiFi.macAddress());
@@ -92,29 +95,31 @@ void loop() {
     if (encoder_changed()) {
         current_mode = encoder_get_mode();
         mode_entry_time = millis();
+        logic_reset_comms_lost();  // 사용자 직접 조작 → comms_lost_close 플래그 리셋
         Serial.print("[ENCODER] Mode changed to: ");
         Serial.println(mode_name(current_mode));
 
-        mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
+        mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time, last_packet_time);
         actuate(result);
     }
 
     // Sensor MCU로부터 command_packet 수신 시 처리
     if (comms_command_available()) {
         last_cmd = comms_get_last_command();
+        last_packet_time = millis();  // 수신 시각 갱신
         Serial.print("[COMMS] command_packet received — fan: ");
         Serial.print(last_cmd.fan_cmd);
         Serial.print(" | cover: ");
         Serial.println(last_cmd.cover_cmd);
 
-        mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
+        mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time, last_packet_time);
 
-        // MANUAL 타임아웃으로 AUTO 복귀 감지
+        // 모드 전환 감지 (AUTO 복귀, comms_lost CLOSE 전환 포함)
         if (result.mode != current_mode) {
             current_mode = result.mode;
             mode_entry_time = millis();
             encoder_set_mode(current_mode);
-            Serial.print("[LOGIC] Auto revert to mode: ");
+            Serial.print("[LOGIC] Mode changed to: ");
             Serial.println(mode_name(current_mode));
         }
 
@@ -129,12 +134,12 @@ void loop() {
     }
 
     // MANUAL 모드 타임아웃 체크 — command_packet 수신과 무관하게 항상 실행
-    mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time);
+    mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time, last_packet_time);
     if (result.mode != current_mode) {
         current_mode = result.mode;
         mode_entry_time = millis();
         encoder_set_mode(current_mode);
-        Serial.print("[LOGIC] Auto revert to mode: ");
+        Serial.print("[LOGIC] Mode changed to: ");
         Serial.println(mode_name(current_mode));
     }
 }
