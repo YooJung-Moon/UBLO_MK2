@@ -16,7 +16,7 @@ void setup() {
     unsigned long start = millis();
     while (!Serial && millis() - start < 3000);
 
-    // 실제 MAC 주소 출력 — config.h의 FAN_MCU_MAC과 비교용
+    // 실제 MAC 주소 출력 — config.h의 FAN_MCU_MACS와 비교용
     Serial.print("Sensor MCU MAC: ");
     Serial.println(WiFi.macAddress());
 
@@ -32,7 +32,9 @@ void setup() {
 
     buffer_init();
     Serial.println("Sensor MCU ready");
-    Serial.println("timestamp, co2, temp, humidity, mode, fan_cmd, cover_cmd, error");
+    Serial.print("Paired Fan MCU count: ");
+    Serial.println(FAN_MCU_COUNT);
+    Serial.println("timestamp, mac, co2, temp, humidity, mode, fan_cmd, cover_cmd, error");
 }
 
 void loop() {
@@ -51,7 +53,7 @@ void loop() {
         }
 
         String ts = rtc_timestamp();
-        sdcard_log_raw(ts, co2, temp, humidity);
+        sdcard_log_raw(ts, co2, temp, humidity);  // 모든 Fan MCU 폴더에 동일하게 기록
         buffer_add(co2);
         led_set_co2(co2);
         sample_count++;
@@ -65,23 +67,40 @@ void loop() {
             Serial.println(avg_co2);
 
             command_packet_t cmd = logic_decide(avg_co2);
-            comms_send(cmd);
 
-            // mode_packet 수신 대기 (최대 3초)
+            // 1. 모든 Fan MCU에 command_packet 연속 전송 (non-blocking, 사실상 동시 전송)
+            for (uint8_t i = 0; i < FAN_MCU_COUNT; i++) {
+                comms_send(i, cmd);
+            }
+
+            // 2. mode_packet 수신 대기 (최대 3초, N대 모두 동일 윈도우 안에서 수집)
             unsigned long wait_start = millis();
-            while (!comms_mode_available() && millis() - wait_start < 3000);
-
-            if (comms_mode_available()) {
-                mode_packet_t mp = comms_get_last_mode();
-                if (mp.error > 0) {
-                    // 에러 발생 시 에러 로깅
-                    sdcard_log_error(ts, mp.error);
-                } else {
-                    // 정상 동작 시 decision 로깅
-                    sdcard_log_decision(ts, mp.mode, mp.fan_cmd, mp.cover_cmd);
+            while (millis() - wait_start < 3000) {
+                bool all_received = true;
+                for (uint8_t i = 0; i < FAN_MCU_COUNT; i++) {
+                    if (!comms_mode_available(i)) {
+                        all_received = false;
+                        break;
+                    }
                 }
-            } else {
-                Serial.println("[COMMS] mode_packet timeout");
+                if (all_received) break;  // 전부 응답 왔으면 3초 다 안 기다리고 진행
+            }
+
+            // 3. Fan MCU별로 응답 온 것만 로깅, 안 온 것은 타임아웃 로깅
+            for (uint8_t i = 0; i < FAN_MCU_COUNT; i++) {
+                if (comms_mode_available(i)) {
+                    mode_packet_t mp = comms_get_last_mode(i);
+                    if (mp.error > 0) {
+                        // 에러 발생 시 에러 로깅
+                        sdcard_log_error(ts, i, mp.error);
+                    } else {
+                        // 정상 동작 시 decision 로깅
+                        sdcard_log_decision(ts, i, mp.mode, mp.fan_cmd, mp.cover_cmd);
+                    }
+                } else {
+                    Serial.print("[COMMS] mode_packet timeout — fan index ");
+                    Serial.println(i);
+                }
             }
         }
     }
