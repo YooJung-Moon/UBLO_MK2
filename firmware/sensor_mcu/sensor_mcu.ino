@@ -9,6 +9,7 @@
 
 static unsigned long last_sensor_time = 0;
 static int sample_count = 0;
+static bool comms_lost_logged[FAN_MCU_COUNT] = {false};  // Fan MCU별 comms_lost 최초 1회 로깅 추적
 
 void setup() {
     delay(3000);
@@ -86,7 +87,7 @@ void loop() {
                 if (all_received) break;  // 전부 응답 왔으면 3초 다 안 기다리고 진행
             }
 
-            // 3. Fan MCU별로 응답 온 것만 로깅, 안 온 것은 comms_lost 로깅
+            // 3. Fan MCU별로 응답 온 것만 로깅, 안 온 것은 최초 1회만 comms_lost 로깅
             for (uint8_t i = 0; i < FAN_MCU_COUNT; i++) {
                 if (comms_mode_available(i)) {
                     mode_packet_t mp = comms_get_last_mode(i);
@@ -95,11 +96,15 @@ void loop() {
                     } else {
                         sdcard_log_decision(ts, i, mp.mode, mp.fan_cmd, mp.cover_cmd);
                     }
+                    comms_lost_logged[i] = false;  // 정상 수신 시 리셋
                 } else {
-                    // mode_packet 미수신 → 통신 두절로 간주하고 로깅
+                    // mode_packet 미수신 → 최초 1회만 comms_lost 로깅
                     Serial.print("[COMMS] mode_packet timeout — fan index ");
                     Serial.println(i);
-                    sdcard_log_comms_lost(ts, i);
+                    if (!comms_lost_logged[i]) {
+                        sdcard_log_comms_lost(ts, i);
+                        comms_lost_logged[i] = true;
+                    }
                 }
             }
         }
