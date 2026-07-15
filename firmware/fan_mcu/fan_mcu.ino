@@ -141,5 +141,6 @@ void loop() {
         encoder_set_mode(current_mode);
         Serial.print("[LOGIC] Mode changed to: ");
         Serial.println(mode_name(current_mode));
+        actuate(result); 
     }
 }
