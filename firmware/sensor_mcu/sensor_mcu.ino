@@ -21,6 +21,13 @@ void setup() {
     Serial.print("Sensor MCU MAC: ");
     Serial.println(WiFi.macAddress());
 
+    // 현재 config.h 모드 표시 — Fan MCU와 TEST/PRODUCTION이 어긋나지 않았는지 확인용
+    #if defined(TEST_MODE)
+        Serial.println("[CONFIG] Mode: TEST_MODE");
+    #elif defined(PRODUCTION_MODE)
+        Serial.println("[CONFIG] Mode: PRODUCTION_MODE");
+    #endif
+
     rtc_init();
     sdcard_init();
     comms_init();

@@ -1,6 +1,12 @@
 #pragma once
 #include <Arduino.h>
 
+// ===================== 모드 선택 =====================
+// 아래 두 줄 중 하나만 주석 해제 — TEST_MODE: 짧은 타임아웃으로 빠른 검증
+//                                  PRODUCTION_MODE: 실제 운영 타임아웃
+#define TEST_MODE
+// #define PRODUCTION_MODE
+
 // ESP-NOW
 // const uint8_t SENSOR_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAE, 0x7D, 0x54};  // pair 1_Sonolux 내부용
 // const uint8_t SENSOR_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAE, 0x7A, 0xD4};  // pair 2_Finland_1st
@@ -37,16 +43,17 @@ const uint8_t SENSOR_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAD, 0xE2, 0x14};     // pa
 // 풍량 (0~100)
 #define FAN_SPEED_PCT 60
 
+// ===================== 타임아웃 (ms) =====================
+#define TIMEOUT_CLOSE   0         // 타임아웃 없음 (공통)
 
-// 타임아웃 (ms)
-#define TIMEOUT_CLOSE   0         // 타임아웃 없음
-// #define TIMEOUT_OPEN    14400000  // 4시간
-// #define TIMEOUT_TURBO   3600000   // 1시간
-
-#define TIMEOUT_OPEN    30000  // 테스트용: 30초
-#define TIMEOUT_TURBO   30000  // 테스트용: 30초
-
-// 통신 두절 판단 기준 (ms) — 마지막 command_packet 수신 후 이 시간을 초과하면 통신 두절로 판단.
-// logic.cpp(AUTO/OPEN/TURBO 판단)와 fan_mcu.ino(AUTO 모드 LED 깜빡임 트리거)가 공통으로 참조한다.
-// #define COMMS_LOST_TIMEOUT 600000  // 10분
-#define COMMS_LOST_TIMEOUT 30000  // 테스트용: 30초
+#if defined(TEST_MODE)
+    #define TIMEOUT_OPEN        30000   // 테스트용: 30초
+    #define TIMEOUT_TURBO       30000   // 테스트용: 30초
+    #define COMMS_LOST_TIMEOUT  30000   // 테스트용: 30초
+#elif defined(PRODUCTION_MODE)
+    #define TIMEOUT_OPEN        14400000  // 4시간
+    #define TIMEOUT_TURBO       3600000   // 1시간
+    #define COMMS_LOST_TIMEOUT  600000    // 10분
+#else
+    #error "config.h: TEST_MODE 또는 PRODUCTION_MODE 중 하나를 정의해야 합니다."
+#endif
