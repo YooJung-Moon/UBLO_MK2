@@ -1,8 +1,9 @@
 #include "logic.h"
 
 // 통신 두절로 인해 CLOSE로 강제 전환된 상태 플래그.
-// AUTO(환기 중 두절), OPEN, TURBO 세 경우 모두 이 플래그를 공유해서 사용한다.
-// 통신이 복구되면(top-of-function 체크) AUTO로 자동 복귀시키는 데 쓰인다.
+// OPEN, TURBO 타임아웃 케이스에서만 사용한다 — 이 경우는 실제로 모드 자체가 CLOSE로 바뀌므로
+// 통신 복구 시 AUTO로 되돌려주는 별도 트리거가 필요하다.
+// (AUTO 모드의 comms-lost 강제 정지는 모드를 바꾸지 않으므로 이 플래그를 쓰지 않는다 — 아래 참고)
 static bool comms_lost_close = false;
 
 void logic_init() {
@@ -23,7 +24,7 @@ mode_packet_t logic_update(uint8_t current_mode, command_packet_t cmd,
     result.mode      = current_mode;
     result.error     = 0;
 
-    // 통신 두절 CLOSE 상태에서 패킷이 다시 수신되면 AUTO로 복귀
+    // 통신 두절 CLOSE 상태(OPEN/TURBO 타임아웃에서 진입)에서 패킷이 다시 수신되면 AUTO로 복귀
     // last_packet_time이 COMMS_LOST_TIMEOUT 이내로 갱신됐다는 건
     // command_packet을 방금 받았다는 의미
     if (comms_lost_close && (millis() - last_packet_time < COMMS_LOST_TIMEOUT)) {
@@ -39,14 +40,15 @@ mode_packet_t logic_update(uint8_t current_mode, command_packet_t cmd,
         case MODE_AUTO:
             // AUTO 상태에서 마지막으로 받은 명령이 "환기(fan ON)"인 채로 통신이 두절되면
             // 새 판단이 갱신되지 않아 커버가 무한정 열린 채로 방치될 수 있다.
-            // → 두절 시간이 COMMS_LOST_TIMEOUT을 넘으면 안전을 위해 CLOSE로 강제 전환한다.
-            // 마지막 명령이 fan_cmd==0(정지 상태)이었다면 이미 안전한 상태이므로 그대로 둔다.
+            // → 두절 시간이 COMMS_LOST_TIMEOUT을 넘으면 안전을 위해 액추에이터만 강제로 닫는다.
+            //    (CLOSE 모드로 전환하는 게 아니라 AUTO 모드를 유지한 채 동작만 오버라이드 —
+            //     LED도 계속 AUTO 통신두절 표시를 보여줘야 하므로 result.mode는 바꾸지 않는다)
+            // 통신이 복구되면 이 조건이 자연히 거짓이 되어 else 분기로 흘러 정상 명령이 재개된다.
+            // → 별도의 복구 플래그가 필요 없다.
             if (cmd.fan_cmd == 1 && (millis() - last_packet_time > COMMS_LOST_TIMEOUT)) {
-                comms_lost_close = true;
-                result.mode      = MODE_CLOSE;
                 result.fan_cmd   = 0;
                 result.cover_cmd = 0;
-                Serial.println("[LOGIC] AUTO comms lost (fan was ON) → CLOSE");
+                Serial.println("[LOGIC] AUTO comms lost (fan was ON) → forced close (mode stays AUTO)");
             } else {
                 result.fan_cmd   = cmd.fan_cmd;
                 result.cover_cmd = cmd.cover_cmd;

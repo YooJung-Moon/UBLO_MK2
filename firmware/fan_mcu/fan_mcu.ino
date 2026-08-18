@@ -24,6 +24,8 @@ String mode_name(uint8_t mode) {
 // 액추에이터 실행 함수
 // OPEN 방향: 커버 먼저 열고 → fan ON
 // CLOSE 방향: fan 먼저 끄고 → 커버 닫기
+// prev_fan_cmd/prev_cover_cmd와 값이 같으면 실제 하드웨어 명령은 스킵되므로
+// 이 함수를 매 loop 무조건 호출해도 안전하다 (모터 재구동/중복 로그 없음).
 void actuate(mode_packet_t result) {
     bool ok = true;
 
@@ -133,7 +135,10 @@ void loop() {
         actuate(result);
     }
 
-    // MANUAL 모드 타임아웃 체크 — command_packet 수신과 무관하게 항상 실행
+    // 통신 상태/타임아웃 반영 체크 — command_packet 수신과 무관하게 매 loop 항상 실행.
+    // (MANUAL 모드 타임아웃뿐 아니라, AUTO 모드에서 모드 전환 없이 액추에이터만
+    //  강제로 닫히는 경우도 이 블록에서 반영된다 — result.mode가 안 바뀌어도 actuate()는 호출해야
+    //  실제로 커버/팬이 닫힌다)
     mode_packet_t result = logic_update(current_mode, last_cmd, mode_entry_time, last_packet_time);
     if (result.mode != current_mode) {
         current_mode = result.mode;
@@ -141,14 +146,14 @@ void loop() {
         encoder_set_mode(current_mode);
         Serial.print("[LOGIC] Mode changed to: ");
         Serial.println(mode_name(current_mode));
-        actuate(result); 
     }
+    actuate(result);  // 모드 변경 여부와 무관하게 항상 호출 (내부에서 값 변경분만 실제 반영됨)
 
     // AUTO 모드 통신 두절 LED 표시 갱신 — 매 loop마다 항상 실행 (패킷 수신/모드 변경과 무관)
     // 조건: 현재 모드가 AUTO이고, 마지막 수신으로부터 COMMS_LOST_TIMEOUT을 초과했을 때만 깜빡임.
-    // - 위 로직에서 AUTO→CLOSE로 이미 전환됐다면 current_mode != MODE_AUTO가 되어 자동으로 꺼짐
-    //   → MANUAL(CLOSE/OPEN/TURBO) 모드에서는 이 표시가 절대 뜨지 않음 (요구사항: manual은 에러표시 없이 작동)
-    // - 통신이 복구되면(last_packet_time 갱신) 조건이 false가 되어 즉시 꺼짐
+    // 이번 변경으로 AUTO의 comms-lost 강제 닫힘은 모드를 바꾸지 않으므로,
+    // 닫힌 상태에서도 current_mode == MODE_AUTO가 유지되어 이 블록이 계속 깜빡임을 보여준다.
+    // 통신이 복구되면(last_packet_time 갱신) 조건이 false가 되어 즉시 꺼지고 정상 AUTO로 복귀한다.
     bool comms_lost_now = (current_mode == MODE_AUTO) &&
                           (millis() - last_packet_time > COMMS_LOST_TIMEOUT);
     encoder_set_comms_lost(comms_lost_now);
