@@ -143,4 +143,13 @@ void loop() {
         Serial.println(mode_name(current_mode));
         actuate(result); 
     }
+
+    // AUTO 모드 통신 두절 LED 표시 갱신 — 매 loop마다 항상 실행 (패킷 수신/모드 변경과 무관)
+    // 조건: 현재 모드가 AUTO이고, 마지막 수신으로부터 COMMS_LOST_TIMEOUT을 초과했을 때만 깜빡임.
+    // - 위 로직에서 AUTO→CLOSE로 이미 전환됐다면 current_mode != MODE_AUTO가 되어 자동으로 꺼짐
+    //   → MANUAL(CLOSE/OPEN/TURBO) 모드에서는 이 표시가 절대 뜨지 않음 (요구사항: manual은 에러표시 없이 작동)
+    // - 통신이 복구되면(last_packet_time 갱신) 조건이 false가 되어 즉시 꺼짐
+    bool comms_lost_now = (current_mode == MODE_AUTO) &&
+                          (millis() - last_packet_time > COMMS_LOST_TIMEOUT);
+    encoder_set_comms_lost(comms_lost_now);
 }

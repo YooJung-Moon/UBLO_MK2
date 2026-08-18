@@ -41,6 +41,12 @@ void setup() {
 void loop() {
     unsigned long now = millis();
 
+    // 통신 두절 LED 표시 갱신 — 매 loop마다 항상 실행 (센서 read 성공/실패, 10초 주기와 무관).
+    // 아래 sensor read 실패 시 return하는 경로가 있어서, 반드시 그보다 앞쪽(loop 최상단)에 둬야
+    // 매 iteration마다 빠짐없이 깜빡임 타이머가 갱신된다.
+    led_set_comms_lost(comms_any_lost());
+    led_update();
+
     // 10초 주기: sensor 읽기 + raw logging + 버퍼 추가
     if (now - last_sensor_time >= SENSOR_INTERVAL) {
         last_sensor_time = now;

@@ -6,11 +6,10 @@
 #define FAN_MCU_COUNT 1
 const uint8_t FAN_MCU_MACS[FAN_MCU_COUNT][6] = {
     // {0x20, 0x6E, 0xF1, 0x31, 0x2D, 0x84},  // pair 1_Sonolux 내부용
-    // {0x20, 0x6E, 0xF1, 0x31, 0x2D, 0x34},  // pair 2_Finland_1st
-    // {0x20, 0x6E, 0xF1, 0x31, 0x30, 0x24},     // pair 3_UBLO 내부용
-       {0x20, 0x6E, 0xF1, 0x31, 0x2E, 0xE0},  // pair 4_Finland_2nd
-
-    // {0x20, 0x6E, 0xF1, 0x31, 0x2E, 0xB4},  // pair 5_TEST (Fan)
+    // {0x20, 0x6E, 0xF1, 0x31, 0x2D, 0x34},  // pair 2_Finland
+    // {0x20, 0x6E, 0xF1, 0x31, 0x30, 0x24},  // pair 3_UBLO
+    {0x20, 0x6E, 0xF1, 0x31, 0x2E, 0xE0},  // pair 4_Finland_2nd
+    // {0x20, 0x6E, 0xF1, 0x31, 0x2E, 0xB4},  // pair 5_TEST
 };
 
 // CO₂ 임계값 (ppm)
@@ -26,3 +25,9 @@ const uint8_t FAN_MCU_MACS[FAN_MCU_COUNT][6] = {
 
 // 센서 수집 주기 (ms)
 #define SENSOR_INTERVAL 10000  // 10초
+
+// 통신 두절 판단 기준 (ms) — Fan MCU로부터 마지막 mode_packet 수신 후 이 시간을 초과하면 두절로 판단.
+// Fan MCU 측 COMMS_LOST_TIMEOUT과 값은 동일하게 맞췄지만, 각 MCU가 자신의 마지막 수신 시각을
+// 독립적으로 기준 삼기 때문에 실제 두절 "감지 시점"은 서로 다를 수 있다.
+#define COMMS_LOST_TIMEOUT 30000  // 테스트용: 30초
+// #define COMMS_LOST_TIMEOUT 600000  // 10분

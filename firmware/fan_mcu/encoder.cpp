@@ -6,7 +6,9 @@
 #define PREVIEW_BLINK_MS    500    // preview 깜빡임 간격 (ms)
 #define CONFIRM_BLINK_MS    100    // 확정 시 깜빡임 간격 (ms)
 #define CONFIRM_BLINK_COUNT 3      // 확정 시 깜빡임 횟수
-#define ERROR_BLINK_MS      300    // 에러 깜빡임 간격 (ms)
+#define ERROR_BLINK_MS      300    // 커버 타임아웃 에러 깜빡임 간격 (ms) — LED 4개 동시
+#define COMMS_LOST_BLINK_MS 400    // AUTO 통신두절 깜빡임 간격 (ms) — LED_AUTO_PIN 1개만
+                                    // ERROR_BLINK_MS(300ms, 4개)와 속도/개수 둘 다 달라서 구별됨
 
 static uint8_t current_mode = MODE_AUTO;  // 초기 모드: AUTO
 static uint8_t preview_mode = MODE_AUTO;
@@ -18,10 +20,15 @@ static unsigned long last_rotate_time = 0;
 static bool blink_state = false;
 static unsigned long last_blink_time = 0;
 
-// 에러 상태 (커버 타임아웃 발생 시 진입)
+// 에러 상태 (커버 타임아웃 발생 시 진입) — 모터/리밋스위치 하드웨어 오류
 static bool error_state = false;
 static bool error_blink_state = false;
 static unsigned long last_error_blink_time = 0;
+
+// 통신 두절 상태 (AUTO 모드에서 command_packet 미수신 지속 시) — 하드웨어 오류와는 별개
+static bool comms_lost_state = false;
+static bool comms_lost_blink_state = false;
+static unsigned long last_comms_lost_blink_time = 0;
 
 // Quadrature decoding
 static int last_encoded = 0;
@@ -152,7 +159,12 @@ static void update_preview() {
     if (millis() - last_rotate_time >= PREVIEW_TIMEOUT) {
         preview_mode = current_mode;
         in_preview = false;
-        show_mode_led(current_mode);
+        // preview 종료 후엔 comms_lost 상태면 그쪽 LED로, 아니면 현재 모드 LED로 복귀
+        if (comms_lost_state) {
+            led_on(MODE_AUTO);
+        } else {
+            show_mode_led(current_mode);
+        }
         Serial.println("[ENCODER] Preview timeout → current mode");
         return;
     }
@@ -186,6 +198,22 @@ static void update_error_blink() {
     }
 }
 
+// AUTO 모드 통신 두절 표시 — LED_AUTO_PIN 하나만 깜빡임.
+// 커버 타임아웃 에러(4개 동시 깜빡임)와는 개수/속도 모두 달라 육안으로 구별된다.
+static void update_comms_lost_blink() {
+    if (!comms_lost_state) return;
+
+    if (millis() - last_comms_lost_blink_time >= COMMS_LOST_BLINK_MS) {
+        last_comms_lost_blink_time = millis();
+        comms_lost_blink_state = !comms_lost_blink_state;
+        if (comms_lost_blink_state) {
+            led_on(MODE_AUTO);
+        } else {
+            all_leds_off();
+        }
+    }
+}
+
 void encoder_init() {
     pinMode(ENC_A_PIN,  INPUT);
     pinMode(ENC_B_PIN,  INPUT);
@@ -207,10 +235,17 @@ void encoder_init() {
 void encoder_update() {
     check_encoder();
     check_button();
+
+    // 표시 우선순위: 커버 타임아웃 에러(4개) > 사용자 조작 중인 프리뷰 > 통신두절(AUTO 1개)
+    // 프리뷰가 comms_lost보다 우선해야 사용자가 다이얼 돌리는 동안은 정상적으로 미리보기가 보인다.
     if (error_state) {
         update_error_blink();
-    } else {
+    } else if (in_preview) {
         update_preview();
+    } else if (comms_lost_state) {
+        update_comms_lost_blink();
+    } else {
+        update_preview();  // in_preview가 false이므로 즉시 반환 — 상태 안전망 목적으로 유지
     }
 }
 
@@ -230,7 +265,11 @@ void encoder_set_mode(uint8_t mode) {
     current_mode = mode;
     preview_mode = mode;
     in_preview = false;
-    show_mode_led(current_mode);
+    // comms_lost 상태가 아닐 때만 즉시 모드 LED로 표시 (comms_lost면 다음 encoder_update()에서
+    // update_comms_lost_blink()가 이어서 처리하므로 여기서 겹쳐 쓰지 않는다)
+    if (!comms_lost_state) {
+        show_mode_led(current_mode);
+    }
 }
 
 void encoder_error_blink() {
@@ -243,4 +282,24 @@ void encoder_error_blink() {
 
 bool encoder_is_error() {
     return error_state;
+}
+
+// lost=true 진입 시 AUTO LED 깜빡임 시작, false 진입 시 정상 모드 LED로 복귀.
+// 이미 같은 상태면 아무 것도 하지 않아 매 loop 호출에도 불필요한 리셋이 없도록 한다.
+void encoder_set_comms_lost(bool lost) {
+    if (lost == comms_lost_state) return;
+    comms_lost_state = lost;
+
+    if (lost) {
+        comms_lost_blink_state = true;
+        last_comms_lost_blink_time = millis();
+        led_on(MODE_AUTO);
+        Serial.println("[ENCODER] Comms lost blink started (AUTO)");
+    } else {
+        // 에러/프리뷰 중이 아니면 현재 모드 LED로 즉시 복귀
+        if (!error_state && !in_preview) {
+            show_mode_led(current_mode);
+        }
+        Serial.println("[ENCODER] Comms lost blink stopped");
+    }
 }

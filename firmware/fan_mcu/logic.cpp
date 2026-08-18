@@ -1,8 +1,9 @@
 #include "logic.h"
 
-#define COMMS_LOST_TIMEOUT 600000  // 10분 (ms) — 마지막 수신 후 이 시간 초과 시 통신 두절로 판단
-
-static bool comms_lost_close = false;  // 통신 두절로 CLOSE 전환된 상태 플래그
+// 통신 두절로 인해 CLOSE로 강제 전환된 상태 플래그.
+// AUTO(환기 중 두절), OPEN, TURBO 세 경우 모두 이 플래그를 공유해서 사용한다.
+// 통신이 복구되면(top-of-function 체크) AUTO로 자동 복귀시키는 데 쓰인다.
+static bool comms_lost_close = false;
 
 void logic_init() {
     // 별도 초기화 없음
@@ -36,8 +37,20 @@ mode_packet_t logic_update(uint8_t current_mode, command_packet_t cmd,
 
     switch (current_mode) {
         case MODE_AUTO:
-            result.fan_cmd   = cmd.fan_cmd;
-            result.cover_cmd = cmd.cover_cmd;
+            // AUTO 상태에서 마지막으로 받은 명령이 "환기(fan ON)"인 채로 통신이 두절되면
+            // 새 판단이 갱신되지 않아 커버가 무한정 열린 채로 방치될 수 있다.
+            // → 두절 시간이 COMMS_LOST_TIMEOUT을 넘으면 안전을 위해 CLOSE로 강제 전환한다.
+            // 마지막 명령이 fan_cmd==0(정지 상태)이었다면 이미 안전한 상태이므로 그대로 둔다.
+            if (cmd.fan_cmd == 1 && (millis() - last_packet_time > COMMS_LOST_TIMEOUT)) {
+                comms_lost_close = true;
+                result.mode      = MODE_CLOSE;
+                result.fan_cmd   = 0;
+                result.cover_cmd = 0;
+                Serial.println("[LOGIC] AUTO comms lost (fan was ON) → CLOSE");
+            } else {
+                result.fan_cmd   = cmd.fan_cmd;
+                result.cover_cmd = cmd.cover_cmd;
+            }
             break;
 
         case MODE_CLOSE:
