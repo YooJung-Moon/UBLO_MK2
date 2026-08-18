@@ -7,7 +7,7 @@
 // PRODUCTION_MODE: 실제 운영값
 // ※ Fan MCU에는 "송수신 주기만 테스트"하는 모드가 없음 — 그건 Sensor MCU의 BUFFER_SIZE/
 //   DECISION_COUNT만 관련된 값이라, Sensor가 TEST_MODE_SYNC_ONLY일 때 Fan은 PRODUCTION_MODE로 둔다.
-// #define TEST_MODE_FAST
+//#define TEST_MODE_FAST
 #define PRODUCTION_MODE
 
 // ESP-NOW
