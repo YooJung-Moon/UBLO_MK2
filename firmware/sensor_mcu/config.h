@@ -2,10 +2,13 @@
 #include <Arduino.h>
 
 // ===================== 모드 선택 =====================
-// 아래 두 줄 중 하나만 주석 해제 — TEST_MODE: 짧은 주기/타임아웃으로 빠른 검증
-//                                  PRODUCTION_MODE: 실제 운영 주기/타임아웃
-// fan_mcu/config.h의 모드 스위치와 항상 같은 쪽으로 맞춰야 두 MCU의 COMMS_LOST_TIMEOUT이 일치한다.
-#define TEST_MODE
+// 아래 세 줄 중 하나만 주석 해제
+// TEST_MODE_SYNC_ONLY: Fan-Sensor 송수신 주기(BUFFER_SIZE/DECISION_COUNT)만 30초로 단축,
+//                       COMMS_LOST_TIMEOUT은 운영값 그대로 — 이때 Fan MCU는 PRODUCTION_MODE로 둘 것
+// TEST_MODE_FAST      : 모든 타임아웃(송수신 주기 + COMMS_LOST_TIMEOUT)을 짧게 — 전체 흐름 빠르게 검증용
+// PRODUCTION_MODE     : 실제 운영값
+#define TEST_MODE_SYNC_ONLY
+// #define TEST_MODE_FAST
 // #define PRODUCTION_MODE
 
 // ESP-NOW — 1:N 페어링 (Sensor MCU 1대 ↔ Fan MCU N대)
@@ -27,17 +30,19 @@ const uint8_t FAN_MCU_MACS[FAN_MCU_COUNT][6] = {
 #define SENSOR_INTERVAL 10000  // 10초
 
 // ===================== 버퍼 / 판단 주기 / 통신 두절 기준 =====================
-#if defined(TEST_MODE)
-    #define BUFFER_SIZE         3      // 테스트용: 3개 (10초 × 3 = 30초)
-    #define DECISION_COUNT      3      // 테스트용: 3개 (30초)
+#if defined(TEST_MODE_SYNC_ONLY)
+    // 송수신 주기만 30초로 단축, COMMS_LOST_TIMEOUT은 운영값 유지
+    #define BUFFER_SIZE         3      // 10초 × 3 = 30초
+    #define DECISION_COUNT      3      // 10초 × 3 = 30초
+    #define COMMS_LOST_TIMEOUT  600000 // 10분 (운영과 동일)
+#elif defined(TEST_MODE_FAST)
+    #define BUFFER_SIZE         3      // 10초 × 3 = 30초
+    #define DECISION_COUNT      3      // 10초 × 3 = 30초
     #define COMMS_LOST_TIMEOUT  30000  // 테스트용: 30초
 #elif defined(PRODUCTION_MODE)
-    #define BUFFER_SIZE         30     // 최근 5분치 데이터 저장 (10초 × 30 = 300초 = 5분)
-    #define DECISION_COUNT      30     // 판단 주기: 5분 (10초 × 30 = 5분)
+    #define BUFFER_SIZE         30     // 10초 × 30 = 5분
+    #define DECISION_COUNT      30     // 10초 × 30 = 5분
     #define COMMS_LOST_TIMEOUT  600000 // 10분
 #else
-    #error "config.h: TEST_MODE 또는 PRODUCTION_MODE 중 하나를 정의해야 합니다."
+    #error "config.h: TEST_MODE_SYNC_ONLY / TEST_MODE_FAST / PRODUCTION_MODE 중 하나를 정의해야 합니다."
 #endif
-// 통신 두절 판단 기준 — Fan MCU로부터 마지막 mode_packet 수신 후 COMMS_LOST_TIMEOUT을 초과하면 두절로 판단.
-// Fan MCU 측 COMMS_LOST_TIMEOUT과 값은 동일하게 맞췄지만, 각 MCU가 자신의 마지막 수신 시각을
-// 독립적으로 기준 삼기 때문에 실제 두절 "감지 시점"은 서로 다를 수 있다.

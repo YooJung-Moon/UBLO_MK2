@@ -2,10 +2,13 @@
 #include <Arduino.h>
 
 // ===================== 모드 선택 =====================
-// 아래 두 줄 중 하나만 주석 해제 — TEST_MODE: 짧은 타임아웃으로 빠른 검증
-//                                  PRODUCTION_MODE: 실제 운영 타임아웃
-#define TEST_MODE
-// #define PRODUCTION_MODE
+// 아래 두 줄 중 하나만 주석 해제
+// TEST_MODE_FAST : 모든 타임아웃(OPEN/TURBO/COMMS_LOST)을 짧게 — 전체 흐름 빠르게 검증용
+// PRODUCTION_MODE: 실제 운영값
+// ※ Fan MCU에는 "송수신 주기만 테스트"하는 모드가 없음 — 그건 Sensor MCU의 BUFFER_SIZE/
+//   DECISION_COUNT만 관련된 값이라, Sensor가 TEST_MODE_SYNC_ONLY일 때 Fan은 PRODUCTION_MODE로 둔다.
+// #define TEST_MODE_FAST
+#define PRODUCTION_MODE
 
 // ESP-NOW
 // const uint8_t SENSOR_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAE, 0x7D, 0x54};  // pair 1_Sonolux 내부용
@@ -46,7 +49,7 @@ const uint8_t SENSOR_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAD, 0xE2, 0x14};     // pa
 // ===================== 타임아웃 (ms) =====================
 #define TIMEOUT_CLOSE   0         // 타임아웃 없음 (공통)
 
-#if defined(TEST_MODE)
+#if defined(TEST_MODE_FAST)
     #define TIMEOUT_OPEN        30000   // 테스트용: 30초
     #define TIMEOUT_TURBO       30000   // 테스트용: 30초
     #define COMMS_LOST_TIMEOUT  30000   // 테스트용: 30초
@@ -55,5 +58,5 @@ const uint8_t SENSOR_MCU_MAC[] = {0xE4, 0xB0, 0x63, 0xAD, 0xE2, 0x14};     // pa
     #define TIMEOUT_TURBO       3600000   // 1시간
     #define COMMS_LOST_TIMEOUT  600000    // 10분
 #else
-    #error "config.h: TEST_MODE 또는 PRODUCTION_MODE 중 하나를 정의해야 합니다."
+    #error "config.h: TEST_MODE_FAST 또는 PRODUCTION_MODE 중 하나를 정의해야 합니다."
 #endif
