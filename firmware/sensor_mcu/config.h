@@ -7,9 +7,9 @@
 //                       COMMS_LOST_TIMEOUT은 운영값 그대로 — 이때 Fan MCU는 PRODUCTION_MODE로 둘 것
 // TEST_MODE_FAST      : 모든 타임아웃(송수신 주기 + COMMS_LOST_TIMEOUT)을 짧게 — 전체 흐름 빠르게 검증용
 // PRODUCTION_MODE     : 실제 운영값
-#define TEST_MODE_SYNC_ONLY
+// #define TEST_MODE_SYNC_ONLY
 // #define TEST_MODE_FAST
-// #define PRODUCTION_MODE
+#define PRODUCTION_MODE
 
 // ESP-NOW — 1:N 페어링 (Sensor MCU 1대 ↔ Fan MCU N대)
 // 통신 테스트: Sensor pair 3 ↔ Fan pair 3 (1:1)
